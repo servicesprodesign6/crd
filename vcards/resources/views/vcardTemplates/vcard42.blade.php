@@ -1,0 +1,2720 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    @if (checkFeature('seo'))
+        @if ($vcard->meta_description)
+            <meta name="description" content="{{ $vcard->meta_description }}">
+        @endif
+        @if ($vcard->meta_keyword)
+            <meta name="keywords" content="{{ $vcard->meta_keyword }}">
+        @endif
+    @else
+        <meta name="description" content="{{ strip_tags($vcard->description) }}">
+        <meta name="keywords" content="">
+    @endif
+    <meta property="og:image"
+        content="{{ $vcard->cover_type == App\Models\Vcard::VIDEO || $vcard->cover_type == App\Models\Vcard::YOUTUBE_link ? $vcard->profile_url : $vcard->cover_url }}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @if (checkFeature('seo') && $vcard->site_title && $vcard->home_title)
+        <title>{{ $vcard->home_title }} | {{ $vcard->site_title }}</title>
+    @else
+        <title>{{ $vcard->name }} | {{ getAppName() }}</title>
+    @endif
+    <!-- PWA  -->
+    <meta name="theme-color" content="#6777ef" />
+    <link rel="apple-touch-icon" href="{{ asset('logo.png') }}">
+    <link rel="manifest" href="{{ asset('pwa/1.json') }}">
+    <!-- BOOTSTRAP LINK CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Bootstrap CSS -->
+    <link href="{{ asset('front/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="icon" href="{{ getVcardFavicon($vcard) }}" type="image/png">
+
+    <link rel="stylesheet" href="{{ asset('front/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('assets/css/slider/css/slick.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/slider/css/slick-theme.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/new_vcard/slick-theme.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/new_vcard/custom.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('assets/css/third-party.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('css/plugins.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/vcard42.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/custom-vcard.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/lightbox.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap" rel="stylesheet" />
+    @if ($vcard->font_family || $vcard->font_size || $vcard->custom_css)
+        <style>
+            @if (checkFeature('custom-fonts'))
+                @if ($vcard->font_family)
+                    body {
+                        font-family:
+                            {{ $vcard->font_family }} !important;
+                    }
+
+                @endif
+
+                @if ($vcard->font_size)
+                    div>h4 {
+                        font-size:
+                            {{ $vcard->font_size }} px !important;
+                    }
+
+                @endif
+            @endif
+            @if (checkFeature('advanced') && $vcard->custom_css)
+                {!! $vcard->custom_css !!}
+            @endif
+        </style>
+    @endif
+</head>
+
+<body>
+    @if (checkFeature('password'))
+        @include('vcards.password')
+    @endif
+
+    <div class="bg-animation" style="position: fixed;top: 0;left: 0;height: 100%;width: 100%;">
+        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex">
+            @foreach (range(1, 2) as $index)
+                <video autoplay muted loop playsinline class="bg-video">
+                    <source src="{{ asset('assets/img/vcard42/bg-video3.mp4') }}" type="video/mp4">
+                </video>
+            @endforeach
+        </div>
+    </div>
+
+    <div
+        class="main-content mx-auto overflow-hidden bg-white {{ getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian' ? 'rtl' : '' }}">
+        <div class="vcard-bg-img"></div>
+
+        <div class="banner-section">
+            <div class="@if ($vcard->cover_type == 2) yt-main-img @endif banner-img">
+                @php
+                    $coverClass =
+                        $vcard->cover_image_type == 0 ? 'object-fit-cover w-100 h-100' : 'object-fit-cover w-100 h-100';
+                @endphp
+                @if ($vcard->cover_type == 0)
+                    <img src="{{ $vcard->cover_url }}" class="{{ $coverClass }}" loading="lazy" />
+                @elseif($vcard->cover_type == 1)
+                    @if (strpos($vcard->cover_url, '.mp4') !== false ||
+                            strpos($vcard->cover_url, '.mov') !== false ||
+                            strpos($vcard->cover_url, '.avi') !== false)
+                        <video class="cover-video {{ $coverClass }}" loop autoplay muted playsinline
+                            alt="background video" id="cover-video">
+                            <source src="{{ $vcard->cover_url }}" type="video/mp4">
+                        </video>
+                        <button type="button" id="soundToggle" class="sound-toggle-btn" aria-label="Toggle sound">
+                            <i class="fa-solid fa-volume-xmark"></i>
+                        </button>
+                    @endif
+                @elseif ($vcard->cover_type == 2)
+                    <div class="youtube-link-42">
+                        <iframe
+                            src="https://www.youtube.com/embed/{{ YoutubeID($vcard->youtube_link) }}?autoplay=1&mute=0&loop=1&playlist={{ YoutubeID($vcard->youtube_link) }}&controls=0&modestbranding=1&showinfo=0&rel=0"
+                            class="cover-video {{ $coverClass }}" id="cover-video" frameborder="0"
+                            allow="autoplay; encrypted-media" allowfullscreen>
+                        </iframe>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- Pwa support --}}
+        @if (isset($enable_pwa) && $enable_pwa == 1 && !isiOSDevice())
+            <div class="mt-0" id="pwa-container">
+                <div class="pwa-support d-flex align-items-center justify-content-center"
+                    @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') dir='rtl' @endif>
+                    <div>
+                        <h1 class="pwa-heading">{{ __('messages.pwa.add_to_home_screen') }}</h1>
+                        <p class="pwa-text text-dark">{{ __('messages.pwa.pwa_description') }} </p>
+                        <div class="text-end d-flex gap-2 align-items-center">
+                            <button id="installPwaBtn"
+                                class="pwa-install-button text-white w-50 mb-1 btn">{{ __('messages.pwa.install') }}
+                            </button>
+                            <button
+                                class="pwa-cancel-button w-50 pwa-close btn btn-secondary mb-1">{{ __('messages.common.cancel') }}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        {{-- support banner --}}
+        @if ((isset($managesection) && $managesection['banner']) || empty($managesection))
+            @if (isset($banners->title))
+                <div class="support-banner-container @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') rtl @endif">
+                    <div class="support-banner banner-section w-100">
+                        <button type="button" class="border-0 bg-transparent text-start banner-close"><i
+                                class="fa-solid fa-xmark"></i></button>
+                        <div class="">
+                            <h1 class="text-center support_heading">{{ $banners->title }}</h1>
+                            <p class="text-center support_text text-dark">{{ $banners->description }} </p>
+                            <div class="text-center">
+                                <a href="{{ $banners->url }}" class="act-now text-white" target="_blank"
+                                    data-turbo="false">{{ $banners->banner_button }} </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- Language --}}
+        <div
+            class="d-flex justify-content-end position-absolute top-0  mx-3 @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') start-0 end-auto @else end-0 @endif">
+            @if ($vcard->language_enable == \App\Models\Vcard::LANGUAGE_ENABLE)
+                <div class="language pt-3">
+                    <ul class="text-decoration-none ps-0">
+                        <li class="dropdown1 dropdown lang-list">
+                            <a class="dropdown-toggle lang-head text-decoration-none" data-toggle="dropdown"
+                                role="button" aria-haspopup="true" aria-expanded="false">
+                                {{ strtoupper(getLanguageIsoCode($vcard->default_language)) }}</a>
+                            <ul class="dropdown-menu lang-hover-list top-100 mt-0">
+                                @foreach (getAllLanguageWithFullData() as $language)
+                                    <li
+                                        class="{{ getLanguageIsoCode($vcard->default_language) == $language->iso_code ? 'active' : '' }}">
+                                        <a href="javascript:void(0)" id="languageName"
+                                            data-name="{{ $language->iso_code }}">
+                                            @if (array_key_exists($language->iso_code, \App\Models\User::FLAG))
+                                                @foreach (\App\Models\User::FLAG as $imageKey => $imageValue)
+                                                    @if ($imageKey == $language->iso_code)
+                                                        <img src="{{ asset($imageValue) }}" class="me-1" />
+                                                    @endif
+                                                @endforeach
+                                            @else
+                                                @if (count($language->media) != 0)
+                                                    <img src="{{ $language->image_url }}" class="me-1" />
+                                                @else
+                                                    <i class="fa fa-flag fa-xl me-3 text-danger"
+                                                        aria-hidden="true"></i>
+                                                @endif
+                                            @endif
+                                            {{ strtoupper($language->iso_code) }}
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            @endif
+        </div>
+
+        {{-- profile section --}}
+        <div class="profile-section px-30 overflow-hidden @if ($vcard->cover_type == 2)  @endif">
+            <div class="d-sm-flex align-items-center gap-3">
+                <div class="profile-img">
+                    <img src="{{ $vcard->profile_url }}" alt="{{ $vcard->name }}" class="w-100 h-100" />
+                </div>
+                <div class="profile-content text-center text-sm-start mt-3 mt-sm-0">
+                    <h1 class="mb-2">
+                        {{ ucwords($vcard->first_name . ' ' . $vcard->last_name) }}
+                        @if ($vcard->is_verified)
+                            <i class="verification-icon bi-patch-check-fill text-primary"></i>
+                        @endif
+                    </h1>
+                    <p class="fs-18 fw-medium mb-1">{{ ucwords($vcard->company) }}</p>
+                    <p class="fs-18 fw-medium mb-1">{{ ucwords($vcard->occupation) }}</p>
+                    <span class="fs-16">{{ ucwords($vcard->job_title) }}</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- description --}}
+        @if ($vcard->description)
+            <div class="profile-description pt-40 px-30 text-center fs-16">
+                <p>{!! $vcard->description !!}</p>
+            </div>
+        @endif
+
+        {{-- social section --}}
+        @if (checkFeature('social_links') && getSocialLink($vcard))
+            <div class="social-section pt-40 px-30">
+                <ul class="d-flex gap-3 flex-wrap justify-content-center">
+                    @foreach (getSocialLinkIcon($vcard) as $social)
+                        <li>
+                            <a href="{{ $social['url'] }}" target="_blank">
+                                <div class="social-bg">
+                                    {!! $social['icon'] !!}
+                                </div>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- custom link section --}}
+        @if (checkFeature('custom-links') && $customLink->isNotEmpty())
+            <div class="custom-link-section pt-40">
+                <div class="custom-link d-flex flex-wrap justify-content-center w-100 gap-3">
+                    @foreach ($customLink as $value)
+                        @if ($value->show_as_button == 1)
+                            <a href="{{ $value->link }}" @if ($value->open_new_tab == 1) target="_blank" @endif
+                                style="
+                                                                        @if ($value->button_color) background-color: {{ $value->button_color }}; @endif
+                                                                        @if ($value->button_type === 'rounded') border-radius: 20px; @endif
+                                                                        @if ($value->button_type === 'square') border-radius: 0px; @endif"
+                                class="d-flex justify-content-center align-items-center text-decoration-none link-text font-primary btn">
+                                {{ $value->link_name }}
+                            </a>
+                        @else
+                            <a href="{{ $value->link }}" @if ($value->open_new_tab == 1) target="_blank" @endif
+                                class="d-flex justify-content-center align-items-center text-decoration-none link-text text-primary">
+                                {{ $value->link_name }}
+                            </a>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        {{-- contact section --}}
+        @if ((isset($managesection) && $managesection['contact_list']) || empty($managesection))
+            @if (
+                !empty($vcard->email) ||
+                    !empty(
+                        $vcard->alternative_email ||
+                            !empty($vcard->phone) ||
+                            !empty($vcard->alternative_phone) ||
+                            !empty($vcard->dob) ||
+                            !empty($vcard->location)
+                    ))
+                <div class="contact-section pt-40 px-20 position-relative">
+                    <div class="bg-vector bg-vector-1">
+                        <img src="{{ asset('assets/img/vcard42/bg-vector-1.png') }}" alt>
+                    </div>
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.dynamic_vcard.contact') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="vector-all vector-1">
+                        <img src="{{ asset('assets/img/vcard42/vector-1.png') }}" alt="image"
+                            class="w-100 h-100">
+                    </div>
+                    <div class="row row-gap-40 text-center mx-0 contact-icon-box"
+                        @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') dir="rtl" @endif>
+                        @if ($vcard->email)
+                            <div class="col-sm-6 px-10">
+                                <div class="contact-box">
+                                    <a href="mailto:{{ $vcard->email }}"
+                                        class="d-flex align-items-center text-white">
+                                        <span class="social-img">
+                                            <img src="{{ asset('assets/img/vcard42/mail.svg') }}" alt="image" />
+                                        </span>
+                                        <span class="contact-name text-center text-break">{{ $vcard->email }}</span>
+                                    </a>
+                                    <div class="service-content-bg">
+                                        <img src="{{ asset('assets/img/vcard42/contact-bg-img.png') }}"
+                                            alt="img" class="w-100">
+                                    </div>
+                                    <div class="top-img position-absolute">
+                                        <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}" alt="img">
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                        @if ($vcard->alternative_email)
+                            <div class="col-sm-6 px-10">
+                                <div class="contact-box">
+                                    <a href="mailto:{{ $vcard->alternative_email }}"
+                                        class="d-flex align-items-center text-white">
+                                        <span class="social-img">
+                                            <img src="{{ asset('assets/img/vcard42/mail.svg') }}" alt="image" />
+                                        </span>
+                                        <span
+                                            class="contact-name text-center text-break">{{ $vcard->alternative_email }}</span>
+                                    </a>
+                                    <div class="service-content-bg">
+                                        <img src="{{ asset('assets/img/vcard42/contact-bg-img.png') }}"
+                                            alt="img" class="w-100">
+                                    </div>
+                                    <div class="top-img position-absolute">
+                                        <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}" alt="img">
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                        @if ($vcard->phone)
+                            <div class="col-sm-6 px-10">
+                                <div class="contact-box">
+                                    <a href="tel:+{{ $vcard->region_code }}{{ $vcard->phone }}"
+                                        class="d-flex align-items-center text-white">
+                                        <span class="social-img">
+                                            <img src="{{ asset('assets/img/vcard42/phone.svg') }}" alt="image" />
+                                        </span>
+                                        <span class="contact-name text-center text-break">+{{ $vcard->region_code }}
+                                            {{ $vcard->phone }}</span>
+                                    </a>
+                                    <div class="service-content-bg">
+                                        <img src="{{ asset('assets/img/vcard42/contact-bg-img.png') }}"
+                                            alt="img" class="w-100">
+                                    </div>
+                                    <div class="top-img position-absolute">
+                                        <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}" alt="img">
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                        @if ($vcard->alternative_phone)
+                            <div class="col-sm-6 px-10">
+                                <div class="contact-box">
+                                    <a href="tel:+{{ $vcard->region_code }}{{ $vcard->alternative_phone }}"
+                                        class="d-flex align-items-center text-white">
+                                        <span class="social-img">
+                                            <img src="{{ asset('assets/img/vcard42/phone.svg') }}" alt="image" />
+                                        </span>
+                                        <span class="contact-name text-center text-break">+{{ $vcard->region_code }}
+                                            {{ $vcard->alternative_phone }}</span>
+                                    </a>
+                                    <div class="service-content-bg">
+                                        <img src="{{ asset('assets/img/vcard42/contact-bg-img.png') }}"
+                                            alt="img" class="w-100">
+                                    </div>
+                                    <div class="top-img position-absolute">
+                                        <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}" alt="img">
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                        @if ($vcard->dob)
+                            <div class="col-sm-6 px-10">
+                                <div class="contact-box">
+                                    <a href="javascript:void(0)" class="d-flex align-items-center text-white">
+                                        <span class="social-img">
+                                            @if($vcard->dob_icon)
+                                                <div class="dob-icon"> <i class="{{ $vcard->dob_icon }}"></i> </div>
+                                            @else
+                                                <img src="{{ asset('assets/img/vcard42/dob.svg') }}" alt="image" />
+                                            @endif
+                                        </span>
+                                        <span class="contact-name text-center text-break">{{ $vcard->dob }}</span>
+                                    </a>
+                                    <div class="service-content-bg">
+                                        <img src="{{ asset('assets/img/vcard42/contact-bg-img.png') }}"
+                                            alt="img" class="w-100 text-break">
+                                    </div>
+                                    <div class="top-img position-absolute">
+                                        <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}" alt="img">
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                        @if ($vcard->location)
+                            <div class="col-sm-6 px-10">
+                                <div class="contact-box">
+                                    <a href="javascript:void(0)" class="d-flex align-items-center text-white">
+                                        <span class="social-img">
+                                            <img src="{{ asset('assets/img/vcard42/location-contact.svg') }}"
+                                                alt="image" />
+                                        </span>
+                                        <span
+                                            class="contact-name text-center text-break">{!! $vcard->location !!}</span>
+                                    </a>
+                                    <div class="service-content-bg">
+                                        <img src="{{ asset('assets/img/vcard42/contact-bg-img.png') }}"
+                                            alt="img" class="w-100">
+                                    </div>
+                                    <div class="top-img position-absolute">
+                                        <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}" alt="img">
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- gallery section --}}
+        @if ((isset($managesection) && $managesection['galleries']) || empty($managesection))
+            @if (checkFeature('gallery') && $vcard->gallery->count())
+                <div class="gallery-section px-20 py-30 mt-40 position-relative">
+                    <div class="bg-vector-2 bg-vector w-60px position-absolute top-0 end-0">
+                        <img src="{{ asset('assets/img/vcard42/bg-vector-2.png') }}" alt class="w-100">
+                    </div>
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.plan.gallery') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="vector-all vector-5">
+                        <img src="{{ asset('assets/img/vcard42/vector-5.png') }}" alt="image"
+                            class="w-100 h-100">
+                    </div>
+
+                    @php
+                        $groupedGallery = $vcard->gallery
+                            ->filter(function ($file) {
+                                return !empty($file->category_name);
+                            })
+                            ->groupBy('category_name');
+                    @endphp
+                    @if ($groupedGallery->isNotEmpty())
+                        <div class="gallery-filter-nav d-flex flex-wrap justify-content-center gap-2 mb-25px mb-2">
+                            <button type="button" class="gallery-filter-btn active" data-gallery-filter="all">
+                                {{ __('messages.all') }}
+                            </button>
+                            @foreach ($groupedGallery as $categoryName => $galleryItems)
+                                <button type="button" class="gallery-filter-btn"
+                                    data-gallery-filter="{{ \Illuminate\Support\Str::slug($categoryName, '-') }}">
+                                    {{ $categoryName }}
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="position-relative">
+                        <div class="gallery-filter-panel active" data-gallery-panel="all">
+                            <div class="gallery-slider">
+                                @foreach ($vcard->gallery as $file)
+                                    @php
+                                        $infoPath = pathinfo(public_path($file->gallery_image));
+                                        $extension = $infoPath['extension'] ?? '';
+                                    @endphp
+                                    <div>
+                                        <div class="gallery-item">
+                                            <div class="gallery-img">
+                                                @if ($file->type == App\Models\Gallery::TYPE_IMAGE)
+                                                    <a href="{{ $file->gallery_image }}"
+                                                        data-lightbox="gallery-images-all">
+                                                        <img src="{{ $file->gallery_image }}"
+                                                            class="w-100 h-100 object-fit-cover" loading="lazy" />
+                                                    </a>
+                                                @elseif($file->type == App\Models\Gallery::TYPE_FILE)
+                                                    <a href="{{ $file->gallery_image }}"
+                                                        class="gallery-link gallery-file-link" target="_blank">
+                                                        <div class="gallery-item gallery-file-item"
+                                                            @if ($extension == 'pdf') style="background-image: url({{ asset('assets/images/pdf-icon.png') }})" @endif
+                                                            @if ($extension == 'xls') style="background-image: url({{ asset('assets/images/xls.png') }})" @endif
+                                                            @if ($extension == 'csv') style="background-image: url({{ asset('assets/images/csv-file.png') }})" @endif
+                                                            @if ($extension == 'xlsx') style="background-image: url({{ asset('assets/images/xlsx.png') }})" @endif>
+                                                        </div>
+                                                    </a>
+                                                @elseif($file->type == App\Models\Gallery::TYPE_VIDEO)
+                                                    <video width="100%" height="100%" class="object-fit-cover video-border-12"
+                                                        controls>
+                                                        <source src="{{ $file->gallery_image }}">
+                                                    </video>
+                                                @elseif($file->type == App\Models\Gallery::TYPE_AUDIO)
+                                                    <div class="audio-container">
+                                                        <img src="{{ asset('assets/img/music.jpeg') }}"
+                                                            class="audio-image">
+                                                        <audio controls src="{{ $file->gallery_image }}"></audio>
+                                                    </div>
+                                                @else
+                                                    <iframe
+                                                        src="https://www.youtube.com/embed/{{ YoutubeID($file->link) }}"
+                                                        class="w-100 video-border-12" height="315" allowfullscreen>
+                                                    </iframe>
+                                                @endif
+                                            </div>
+                                            <a href="{{ $file->type == App\Models\Gallery::TYPE_IMAGE ? $file->gallery_image : 'javascript:void(0)' }}"
+                                                class="expand-icon"
+                                                @if ($file->type == App\Models\Gallery::TYPE_IMAGE) data-lightbox="gallery-expand-all" @endif>
+                                                <img src="{{ asset('assets/img/vcard42/expand-icon.svg') }}"
+                                                    alt="image" />
+                                            </a>
+                                            <div class="gallery-top-left">
+                                                <img src="{{ asset('assets/img/vcard42/gallery-top-left.png') }}"
+                                                    alt="image" class="w-100 h-100">
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        @foreach ($groupedGallery as $categoryName => $galleryItems)
+                            <div class="gallery-filter-panel"
+                                data-gallery-panel="{{ \Illuminate\Support\Str::slug($categoryName, '-') }}">
+                                <div class="gallery-slider">
+                                    @foreach ($galleryItems as $file)
+                                        @php
+                                            $infoPath = pathinfo(public_path($file->gallery_image));
+                                            $extension = $infoPath['extension'] ?? '';
+                                        @endphp
+                                        <div>
+                                            <div class="gallery-item">
+                                                <div class="gallery-img">
+                                                    @if ($file->type == App\Models\Gallery::TYPE_IMAGE)
+                                                        <a href="{{ $file->gallery_image }}"
+                                                            data-lightbox="gallery-images-{{ \Illuminate\Support\Str::slug($categoryName, '-') }}">
+                                                            <img src="{{ $file->gallery_image }}"
+                                                                class="w-100 h-100 object-fit-cover" loading="lazy" />
+                                                        </a>
+                                                    @elseif($file->type == App\Models\Gallery::TYPE_FILE)
+                                                        <a href="{{ $file->gallery_image }}"
+                                                            class="gallery-link gallery-file-link" target="_blank">
+                                                            <div class="gallery-item gallery-file-item"
+                                                                @if ($extension == 'pdf') style="background-image: url({{ asset('assets/images/pdf-icon.png') }})" @endif
+                                                                @if ($extension == 'xls') style="background-image: url({{ asset('assets/images/xls.png') }})" @endif
+                                                                @if ($extension == 'csv') style="background-image: url({{ asset('assets/images/csv-file.png') }})" @endif
+                                                                @if ($extension == 'xlsx') style="background-image: url({{ asset('assets/images/xlsx.png') }})" @endif>
+                                                            </div>
+                                                        </a>
+                                                    @elseif($file->type == App\Models\Gallery::TYPE_VIDEO)
+                                                        <video width="100%" height="100%" class="object-fit-cover video-border-12"
+                                                            controls>
+                                                            <source src="{{ $file->gallery_image }}">
+                                                        </video>
+                                                    @elseif($file->type == App\Models\Gallery::TYPE_AUDIO)
+                                                        <div class="audio-container">
+                                                            <img src="{{ asset('assets/img/music.jpeg') }}"
+                                                                class="audio-image">
+                                                            <audio controls src="{{ $file->gallery_image }}"></audio>
+                                                        </div>
+                                                    @else
+                                                        <iframe
+                                                            src="https://www.youtube.com/embed/{{ YoutubeID($file->link) }}"
+                                                            class="w-100 video-border-12" height="315" allowfullscreen>
+                                                        </iframe>
+                                                    @endif
+                                                </div>
+                                                <a href="{{ $file->type == App\Models\Gallery::TYPE_IMAGE ? $file->gallery_image : 'javascript:void(0)' }}"
+                                                    class="expand-icon"
+                                                    @if ($file->type == App\Models\Gallery::TYPE_IMAGE) data-lightbox="gallery-expand-{{ \Illuminate\Support\Str::slug($categoryName, '-') }}" @endif>
+                                                    <img src="{{ asset('assets/img/vcard42/expand-icon.svg') }}"
+                                                        alt="image" />
+                                                </a>
+                                                <div class="gallery-top-left">
+                                                    <img src="{{ asset('assets/img/vcard42/gallery-top-left.png') }}"
+                                                        alt="image" class="w-100 h-100">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- service section --}}
+        @if ((isset($managesection) && $managesection['services']) || empty($managesection))
+            @if (checkFeature('services') && $vcard->services->count())
+                <div class="service-section pt-40 px-20 position-relative">
+                    <div class="bg-vector-4 bg-vector">
+                        <img src="{{ asset('assets/img/vcard42/bg-vector-4.png') }}" alt class="w-100">
+                    </div>
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.vcard.services') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="vector-all vector-2">
+                        <img src="{{ asset('assets/img/vcard42/vector-2.png') }}" alt="image"
+                            class="w-100 h-100">
+                    </div>
+                    @if ($vcard->services_slider_view)
+                        <div class="service-slider">
+                            @foreach ($vcard->services as $service)
+                                <div>
+                                    <div class="service-card position-relative h-100">
+                                        <div class="service-img">
+                                            <a href="{{ $service->service_url ?? 'javascript:void(0)' }}"
+                                                class="{{ $service->service_url ? 'pe-auto' : 'pe-none' }}"
+                                                target="{{ $service->service_url ? '_blank' : '' }}">
+                                                <img src="{{ $service->service_icon }}" alt="{{ $service->name }}"
+                                                    class="w-100 h-100 object-fit-cover" />
+                                            </a>
+                                        </div>
+                                        <div class="service-content pt-3">
+                                            <div class="position-relative service-title-desc">
+                                                <h3 class="fw-semibold">{{ $service->name }}</h3>
+                                                <p>
+                                                    {!! $service->description !!}
+                                                </p>
+                                            </div>
+                                            @if ($vcard->show_service_enquiry_btn == true)
+                                                @if ($service->service_url)
+                                                    <div class="enquiry-btn text-center mt-3 mx-auto">
+                                                        <a href="{{ $service->service_url ?? 'javascript:void(0)' }}"
+                                                            target="{{ $service->service_url ? '_blank' : '' }}"
+                                                            class="enquiry-btn button-primary d-block mx-auto @if (!$service->service_url) disabled @endif">
+                                                            <button class="btn-primary mx-auto"
+                                                                data-id="{{ $service->id }}">{{ __('messages.contact_us.enquiry') }}</button>
+                                                        </a>
+                                                    </div>
+                                                @endif
+                                            @endif
+
+                                            <div class="service-dot-img">
+                                                <img src="{{ asset('assets/img/vcard42/service-dot-img.png') }}"
+                                                    alt="image">
+                                            </div>
+                                        </div>
+                                        <div class="service-content-bg">
+                                            <img src="{{ asset('assets/img/vcard42/content-bg.png') }}"
+                                                alt="image" class="w-100">
+                                        </div>
+                                        <div class="top-img position-absolute">
+                                            <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}"
+                                                alt="image" class="w-100 h-100">
+                                        </div>
+                                        <div class="top-left-img">
+                                            <img src="{{ asset('assets/img/vcard42/top-left-img.png') }}"
+                                                alt="image" class="w-100 h-100">
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="row row-gap-20 service-row" @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') dir="rtl" @endif>
+                            @foreach ($vcard->services as $service)
+                                <div class="col-sm-6 d-flex align-items-stretch">
+                                    <div class="service-card position-relative h-100 w-100">
+                                        <div class="service-img">
+                                            <a href="{{ $service->service_url ?? 'javascript:void(0)' }}"
+                                                class="{{ $service->service_url ? 'pe-auto' : 'pe-none' }}"
+                                                target="{{ $service->service_url ? '_blank' : '' }}">
+                                                <img src="{{ $service->service_icon }}" alt="{{ $service->name }}"
+                                                    class="w-100 h-100 object-fit-cover" />
+                                            </a>
+                                        </div>
+                                        <div class="service-content pt-3">
+                                            <div class="position-relative service-title-desc">
+                                                <h3 class="fw-semibold">{{ $service->name }}</h3>
+                                                <p>
+                                                    {!! $service->description !!}
+                                                </p>
+                                            </div>
+                                            @if ($vcard->show_service_enquiry_btn == true)
+                                                @if ($service->service_url)
+                                                    <div class="enquiry-btn text-center mt-3 mx-auto">
+                                                        <a href="{{ $service->service_url ?? 'javascript:void(0)' }}"
+                                                            target="{{ $service->service_url ? '_blank' : '' }}"
+                                                            class="enquiry-btn button-primary d-block mx-auto @if (!$service->service_url) disabled @endif">
+                                                            <button class="btn-primary mx-auto"
+                                                                data-id="{{ $service->id }}">{{ __('messages.contact_us.enquiry') }}</button>
+                                                        </a>
+                                                    </div>
+                                                @endif
+                                            @endif
+
+                                            <div class="service-dot-img">
+                                                <img src="{{ asset('assets/img/vcard42/service-dot-img.png') }}"
+                                                    alt="image">
+                                            </div>
+                                        </div>
+                                        <div class="service-content-bg">
+                                            <img src="{{ asset('assets/img/vcard42/content-bg.png') }}"
+                                                alt="image" class="w-100">
+                                        </div>
+                                        <div class="top-img position-absolute">
+                                            <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}"
+                                                alt="image" class="w-100 h-100">
+                                        </div>
+                                        <div class="top-left-img">
+                                            <img src="{{ asset('assets/img/vcard42/top-left-img.png') }}"
+                                                alt="image" class="w-100 h-100">
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
+        @endif
+
+        {{-- make appointment --}}
+        @if ((isset($managesection) && $managesection['appointments']) || empty($managesection))
+            @if (checkFeature('appointments') && $vcard->appointmentHours->count())
+                <div class="appointment-section px-20 py-30 mt-40 position-relative">
+                    <div class="bg-vector bg-vector-1 end-20">
+                        <img src="{{ asset('assets/img/vcard42/bg-vector-1.png') }}" alt>
+                    </div>
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.make_appointments') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="appointment-bg position-relative appointment overflow-hidden"
+                        @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') dir="rtl" @endif>
+                        <div class="position-relative">
+                            <div class="input-group-date d-flex align-items-center position-relative">
+                                <input type="text" name="date"
+                                    class="date appoint-input text-start appointment-input form-control p-0 fw-5 fs-14 lh-sm text-black bg-transparent border-0 rounded-0"
+                                    id="pickUpDate" placeholder="{{ __('messages.form.pick_date') }}" />
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text border-0 p-0 rounded-0 bg-transparent ms-1">
+                                        <img src="{{ asset('assets/img/vcard42/appointment-calender.svg') }}"
+                                            alt="image" class="w-100 h-100" />
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="container px-0">
+                                    <div id="slotData" class="row time-select"></div>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <button type="button" class="btn-primary d-none fw-6 mx-auto appointmentAdd">
+                                    {{ __('messages.make_appointments') }}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="cart-bg position-absolute top-0 end-0">
+                            <img src="{{ asset('assets/img/vcard42/vcard-top-img.png') }}" alt="vcard top image">
+                        </div>
+                    </div>
+                </div>
+                @include('vcardTemplates.appointment')
+            @endif
+        @endif
+
+        {{-- product section --}}
+        @if ((isset($managesection) && $managesection['products']) || empty($managesection))
+            @if (checkFeature('products') && $vcard->products->count())
+                <div class="product-section px-20 py-30 mt-40 position-relative overflow-hidden">
+                    <div class="bg-vector-6 bg-vector">
+                        <img src="{{ asset('assets/img/vcard42/bg-vector-4.png') }}" alt class="w-100">
+                    </div>
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.plan.products') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="vector-all vector-3">
+                        <img src="{{ asset('assets/img/vcard42/vector-3.png') }}" alt="image"
+                            class="w-100 h-100">
+                    </div>
+
+                    <div class="product-slider mt-4">
+                        @foreach ($vcard->products as $product)
+                            <div>
+                                <div class="product-card">
+                                    @if ($product->product_url)
+                                        <a href="{{ $product->product_url }}" target="_blank"
+                                            class="text-decoration-none fs-6 d-block">
+                                        @else
+                                            <div class="text-decoration-none fs-6 d-block">
+                                    @endif
+                                    <div class="product-img">
+                                        <img src="{{ $product->product_icon }}" alt="{{ $product->name }}"
+                                            class="w-100 h-100 object-fit-cover" />
+                                    </div>
+                                    <div class="product-content">
+                                        <h3 class="fw-semibold">
+                                            {{ $product->name }}
+                                        </h3>
+                                        <div class="d-flex align-items-center justify-content-between gap-3 mt-3">
+                                            @if ($product->currency_id && $product->price)
+                                                <span>{{ currencyFormat($product->price, 2, $product->currency->currency_code) }}</span>
+                                            @elseif($product->price)
+                                                <span>{{ currencyFormat($product->price, 2, getUserCurrencyIcon($vcard->user->id)) }}</span>
+                                            @else
+                                                <span></span>
+                                            @endif
+                                            @if ($vcard->show_product_enquiry_btn == true)
+                                                @if ($product->product_url)
+                                                    <div class="enquiry-btn text-center">
+                                                        <a href="{{ $product->product_url ?? 'javascript:void(0)' }}"
+                                                            target="{{ $product->product_url ? '_blank' : '' }}"
+                                                            class="enquiry-btn button-primary d-block @if (!$product->product_url) disabled @endif">
+                                                            <button class="btn-primary product-enquiry-btn"
+                                                                data-id="{{ $product->id }}">{{ __('messages.contact_us.enquiry') }}</button>
+                                                        </a>
+                                                    </div>
+                                                @endif
+                                            @endif
+                                        </div>
+                                    </div>
+                                    @if ($product->product_url)
+                                        </a>
+                                    @else
+                                        </div>
+                                    @endif
+
+                                    <div class="service-content-bg">
+                                        <img src="{{ asset('assets/img/vcard42/content-bg.png') }}" alt="image"
+                                            class="w-100">
+                                    </div>
+                                    <div class="top-img position-absolute">
+                                        <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}" alt="image"
+                                            class="w-100 h-100">
+                                    </div>
+                                    <div class="top-left-img">
+                                        <img src="{{ asset('assets/img/vcard42/top-left-img.png') }}" alt="image"
+                                            class="w-100 h-100">
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="mt-4 text-center">
+                        <a class="view-more enquiry-btn btn-primary d-inline-block view-all"
+                            href="{{ $vcardProductUrl }}">{{ __('messages.analytics.view_more') }}
+                            <i class="fa-solid fa-arrow-right right-arrow-animation"></i>
+                        </a>
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- whatsapp store --}}
+        @if ((isset($managesection) && $managesection['whatsapp_store']) || empty($managesection))
+            @if ($whatsappStore->count())
+                <div class="whatsapp-store-section px-20 py-30 position-relative overflow-hidden">
+                    <div class="bg-vector-6 bg-vector">
+                        <img src="{{ asset('assets/img/vcard42/bg-vector-4.png') }}" alt class="w-100">
+                    </div>
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.feature.whatsapp_store') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="vector-all vector-1">
+                        <img src="{{ asset('assets/img/vcard42/vector-1.png') }}" alt="image"
+                            class="w-100 h-100">
+                    </div>
+
+                    <div class="whatsapp-store-slider mt-4">
+                        @foreach ($whatsappStore as $store)
+                            <div>
+                                <div class="whatsapp-card">
+                                    <div class="whatsapp-card-img">
+                                        <a href="{{ route('whatsapp.store.show', $store->url_alias) }}" target="_blank">
+                                            <img src="{{ $store->cover_url }}" alt="{{ $store->store_name }}"
+                                                class="w-100 h-100 object-fit-cover" />
+                                        </a>
+                                    </div>
+                                    <div class="whatsapp-card-content text-center">
+                                        <h3 class="fw-semibold whatsapp-card-name text-center">
+                                            {{ $store->store_name }}
+                                        </h3>
+                                        <div class="d-flex align-items-center justify-content-center gap-3 mt-3">
+                                            <div class="enquiry-btn">
+                                                <a href="{{ route('whatsapp.store.show', $store->url_alias) }}"
+                                                    target="_blank" class="enquiry-btn button-primary d-block">
+                                                    <button class="btn-primary">{{ __('messages.vcard.visit_store') }}</button>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="whatsapp-card-bg">
+                                        <img src="{{ asset('assets/img/vcard42/content-bg.png') }}" alt="image"
+                                            class="w-100">
+                                    </div>
+                                    <div class="top-img position-absolute">
+                                        <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}" alt="image"
+                                            class="w-100 h-100">
+                                    </div>
+                                    <div class="top-left-img">
+                                        <img src="{{ asset('assets/img/vcard42/top-left-img.png') }}" alt="image"
+                                            class="w-100 h-100">
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- testimonial --}}
+        @if ((isset($managesection) && $managesection['testimonials']) || empty($managesection))
+            @if (checkFeature('testimonials') && $vcard->testimonials->count())
+                <div class="testimonial-section px-20 py-30 mt-40 position-relative">
+                    <div class="bg-vector-5 bg-vector">
+                        <img src="{{ asset('assets/img/vcard42/bg-vector-5.png') }}" alt class="w-100">
+                    </div>
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.plan.testimonials') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="vector-all vector-6">
+                        <img src="{{ asset('assets/img/vcard42/vector-6.png') }}" alt="image" class="w-100 h-100">
+                    </div>
+                    <div class="testimonial-slider">
+                        @foreach ($vcard->testimonials as $testimonial)
+                            <div>
+                                <div class="testimonial-card">
+                                    <div class="testimonial-bg d-flex flex-column flex-sm-row align-items-sm-center w-100">
+                                        <span class="testimonial-img">
+                                            <img src="{{ $testimonial->image_url }}" alt="{{ $testimonial->name }}"
+                                                class="w-100 h-100 object-fit-cover rounded-circle" />
+                                        </span>
+                                        <div class="position-relative h-100 pt-3 ps-5">
+                                            <div class="quote-img quote-left">
+                                                <svg width="40" height="40" viewBox="0 0 24 24" version="1.1"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    xmlns:xlink="http://www.w3.org/1999/xlink" fill="#eb8001"
+                                                    stroke="#eb8001">
+                                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                    </g>
+                                                    <g id="SVGRepo_iconCarrier">
+                                                        <title>quote_left_fill</title>
+                                                        <g id="页面-1" stroke="none" stroke-width="1" fill="none"
+                                                            fill-rule="evenodd">
+                                                            <g id="Editor"
+                                                                transform="translate(-624.000000, -144.000000)"
+                                                                fill-rule="nonzero">
+                                                                <g id="quote_left_fill"
+                                                                    transform="translate(624.000000, 144.000000)">
+                                                                    <path
+                                                                        d="M24,0 L24,24 L0,24 L0,0 L24,0 Z M12.5934901,23.257841 L12.5819402,23.2595131 L12.5108777,23.2950439 L12.4918791,23.2987469 L12.4918791,23.2987469 L12.4767152,23.2950439 L12.4056548,23.2595131 C12.3958229,23.2563662 12.3870493,23.2590235 12.3821421,23.2649074 L12.3780323,23.275831 L12.360941,23.7031097 L12.3658947,23.7234994 L12.3769048,23.7357139 L12.4804777,23.8096931 L12.4953491,23.8136134 L12.4953491,23.8136134 L12.5071152,23.8096931 L12.6106902,23.7357139 L12.6232938,23.7196733 L12.6232938,23.7196733 L12.6266527,23.7031097 L12.609561,23.275831 C12.6075724,23.2657013 12.6010112,23.2592993 12.5934901,23.257841 L12.5934901,23.257841 Z M12.8583906,23.1452862 L12.8445485,23.1473072 L12.6598443,23.2396597 L12.6498822,23.2499052 L12.6498822,23.2499052 L12.6471943,23.2611114 L12.6650943,23.6906389 L12.6699349,23.7034178 L12.6699349,23.7034178 L12.678386,23.7104931 L12.8793402,23.8032389 C12.8914285,23.8029875 12.9022333,23.8029875 12.9078286,23.7952264 L12.9118235,23.7811639 L12.8776777,23.1665331 C12.8752882,23.1545897 12.8674102,23.1470016 12.8583906,23.1452862 L12.8583906,23.1452862 Z M12.1430473,23.1473072 C12.1332178,23.1423925 12.1221763,23.1452606 12.1156365,23.1525954 L12.1099173,23.1665331 L12.0757714,23.7811639 C12.0751323,23.7926639 12.0828099,23.8018602 12.0926481,23.8045676 L12.108256,23.8032389 L12.3092106,23.7104931 L12.3186497,23.7024347 L12.3186497,23.7024347 L12.3225043,23.6906389 L12.340401,23.2611114 L12.337245,23.2485176 L12.337245,23.2485176 L12.3277531,23.2396597 L12.1430473,23.1473072 Z"
+                                                                        id="MingCute" fill-rule="nonzero"> </path>
+                                                                    <path
+                                                                        d="M8.40001,6.20006 C8.84184,5.86869 9.46864,5.95823 9.80001,6.40005 C10.1314,6.84188 10.0418,7.46868 9.60002,7.80006 C8.03605,8.97305 7.13907,10.1135 6.62712,11.1097 C6.90615,11.0381 7.19863,11.0000002 7.5,11.0000002 C9.433,11.0000002 11,12.567 11,14.5000002 C11,16.433 9.433,18.0000002 7.5,18.0000002 C5.58635,18.0000002 4.0314,16.4642 4.00047,14.5579 C3.91027,13.6929 3.92344,12.4169 4.50804,10.9437 C5.10548,9.43818 6.27242,7.79577 8.40001,6.20006 Z M17.4,6.20006 C17.8418,5.86869 18.4686,5.95823 18.8,6.40005 C19.1314,6.84188 19.0418,7.46868 18.6,7.80006 C17.036,8.97305 16.1391,10.1135 15.6271,11.1097 C15.9061,11.0381 16.1986,11.0000002 16.5,11.0000002 C18.433,11.0000002 20,12.567 20,14.5000002 C20,16.433 18.433,18.0000002 16.5,18.0000002 C14.5863,18.0000002 13.0314,16.4642 13.0005,14.5579 C12.9103,13.6929 12.9234,12.4169 13.508,10.9437 C14.1055,9.43818 15.2724,7.79577 17.4,6.20006 Z"
+                                                                        id="形状结合" fill="#eb8001"> </path>
+                                                                </g>
+                                                            </g>
+                                                        </g>
+                                                    </g>
+                                                </svg>
+                                            </div>
+                                            <h6 class="mb-2 fw-semibold">{{ $testimonial->name }}</h6>
+                                            <span class="line mb-2"></span>
+                                            <div class="testimonial-desc">
+                                                <p>
+                                                    {{ $testimonial->description }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="top-left-img">
+                                        <img src="{{ asset('assets/img/vcard42/top-left-img.png') }}" alt="image"
+                                            class="w-100 h-100">
+                                    </div>
+                                    <div class="service-content-bg d-none d-sm-block">
+                                        <img src="{{ asset('assets/img/vcard42/testimonial-bg-content.png') }}"
+                                            alt="image" class="w-100 h-100">
+                                    </div>
+                                    <div class="d-block d-sm-none service-content-bg">
+                                        <img src="{{ asset('assets/img/vcard42/content-bg.png') }}" alt="img"
+                                            class="w-100">
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- insta feed --}}
+        @if ((isset($managesection) && $managesection['insta_embed']) || empty($managesection))
+            @if (checkFeature('insta_embed') && $vcard->instagramEmbed->count())
+                <div class="px-20 pt-30 pb-2 position-relative overflow-hidden">
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.feature.insta_embed') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="vector-all vector-5">
+                        <img src="{{ asset('assets/img/vcard42/vector-5.png') }}" alt="image"
+                            class="w-100 h-100">
+                    </div>
+
+                    <nav>
+                        <div class="row insta-toggle">
+                            <div class="nav nav-tabs border-0 px-0" id="nav-tab" role="tablist">
+                                <button
+                                    class="d-flex align-items-center justify-content-center py-2 active postbtn instagram-btn  border-0  mr-0"
+                                    id="nav-home-tab" data-bs-toggle="tab" data-bs-target="#nav-home" type="button"
+                                    role="tab" aria-controls="nav-home" aria-selected="true">
+                                    <svg aria-label="Posts" class="svg-post-icon x1lliihq x1n2onr6 x173jzuc"
+                                        fill="currentColor" height="24" role="img" viewBox="0 0 24 24"
+                                        width="24">
+                                        <title>Posts</title>
+                                        <rect fill="none" height="18" stroke="currentColor"
+                                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            width="18" x="3" y="3"></rect>
+                                        <line fill="none" stroke="currentColor" stroke-linecap="round"
+                                            stroke-linejoin="round" stroke-width="2" x1="9.015" x2="9.015"
+                                            y1="3" y2="21">
+                                        </line>
+                                        <line fill="none" stroke="currentColor" stroke-linecap="round"
+                                            stroke-linejoin="round" stroke-width="2" x1="14.985" x2="14.985"
+                                            y1="3" y2="21">
+                                        </line>
+                                        <line fill="none" stroke="currentColor" stroke-linecap="round"
+                                            stroke-linejoin="round" stroke-width="2" x1="21" x2="3"
+                                            y1="9.015" y2="9.015">
+                                        </line>
+                                        <line fill="none" stroke="currentColor" stroke-linecap="round"
+                                            stroke-linejoin="round" stroke-width="2" x1="21" x2="3"
+                                            y1="14.985" y2="14.985">
+                                        </line>
+                                    </svg>
+                                </button>
+                                <button
+                                    class="d-flex align-items-center justify-content-center py-2 instagram-btn reelsbtn  border-0 text-dark mr-0"
+                                    id="nav-profile-tab" data-bs-toggle="tab" data-bs-target="#nav-profile"
+                                    type="button" role="tab" aria-controls="nav-profile" aria-selected="false">
+                                    <svg class="svg-reels-icon" viewBox="0 0 48 48" width="27" height="27">
+                                        <path
+                                            d="m33,6H15c-.16,0-.31,0-.46.01-.7401.04-1.46.17-2.14.38-3.7,1.11-6.4,4.55-6.4,8.61v18c0,4.96,4.04,9,9,9h18c4.96,0,9-4.04,9-9V15c0-4.96-4.04-9-9-9Zm7,27c0,3.86-3.14,7-7,7H15c-3.86,0-7-3.14-7-7V15c0-3.37,2.39-6.19,5.57-6.85.46-.1.94-.15,1.43-.15h18c3.86,0,7,3.14,7,7v18Z"
+                                            fill="currentColor" class="color000 svgShape not-active-svg"></path>
+                                        <path
+                                            d="M21 16h-2.2l-.66-1-4.57-6.85-.76-1.15h2.39l.66 1 4.67 7 .3.45c.11.17.17.36.17.55zM34 16h-2.2l-.66-1-4.67-7-.66-1h2.39l.66 1 4.67 7 .3.45c.11.17.17.36.17.55z"
+                                            fill="currentColor" class="color000 svgShape not-active-svg"></path>
+                                        <rect width="36" height="3" x="6" y="15" fill="currentColor"
+                                            class="color000 svgShape"></rect>
+                                        <path
+                                            d="m20,35c-.1753,0-.3506-.0459-.5073-.1382-.3052-.1797-.4927-.5073-.4927-.8618v-10c0-.3545.1875-.6821.4927-.8618.3066-.1797.6831-.1846.9932-.0122l9,5c.3174.1763.5142.5107.5142.874s-.1968.6978-.5142.874l-9,5c-.1514.084-.3188.126-.4858.126Zm1-9.3003v6.6006l5.9409-3.3003-5.9409-3.3003Z"
+                                            fill="currentColor" class="color000 svgShape not-active-svg"></path>
+                                        <path
+                                            d="m6,33c0,4.96,4.04,9,9,9h18c4.96,0,9-4.04,9-9v-16H6v16Zm13-9c0-.35.19-.68.49-.86.31-.18.69-.19,1-.01l9,5c.31.17.51.51.51.87s-.2.7-.51.87l-9,5c-.16.09-.3199.13-.49.13-.18,0-.35-.05-.51-.14-.3-.18-.49-.51-.49-.86v-10Zm23-9c0-4.96-4.04-9-9-9h-5.47l6,9h8.47Zm-10.86,0l-6.01-9h-10.13c-.16,0-.31,0-.46.01l5.99,8.99h10.61ZM12.4,6.39c-3.7,1.11-6.4,4.55-6.4,8.61h12.14l-5.74-8.61Z"
+                                            fill="currentColor" class="color000 svgShape active-svg"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+                <div id="postContent" class="insta-feed px-30 pb-4">
+                    <div class="row overflow-hidden mt-3 row-gap-20" loading="lazy">
+                        <!-- "Post" content -->
+                        @foreach ($vcard->InstagramEmbed as $InstagramEmbed)
+                            @if ($InstagramEmbed->type == 0)
+                                <div class="col-12 col-sm-6 insta-feed-iframe">
+                                    {!! $InstagramEmbed->embedtag !!}
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+                <div class="d-none insta-feed px-20 pb-4" id="reelContent">
+                    <div class="row overflow-hidden mt-3 row-gap-20">
+                        <!-- "Reel" content -->
+                        @foreach ($vcard->InstagramEmbed as $InstagramEmbed)
+                            @if ($InstagramEmbed->type == 1)
+                                <div class="col-12 col-sm-6 insta-feed-iframe">
+                                    {!! $InstagramEmbed->embedtag !!}
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- linkedin section --}}
+        @if ((isset($managesection) && $managesection['linkedin_embed']) || empty($managesection))
+            @if (checkFeature('linkedin_embed') && $vcard->linkedinEmbed->count())
+                <div class="px-20 py-30 mt-4 position-relative overflow-hidden">
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.feature.linkedin_embed') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="vector-all vector-6">
+                        <img src="{{ asset('assets/img/vcard42/vector-6.png') }}" alt="image"
+                            class="w-100 h-100">
+                    </div>
+
+                    <div class="linkedin-feed px-30">
+                        <div class="row overflow-hidden mt-2 row-gap-20" loading="lazy">
+                            <!-- "Post" content -->
+                            @foreach ($vcard->LinkedinEmbed as $LinkedinEmbed)
+                                @if ($LinkedinEmbed->type == 0)
+                                    <div class="col-12 col-sm-6 linkedin-feed-iframe">
+                                        {!! $LinkedinEmbed->embedtag !!}
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- blog --}}
+        @if ((isset($managesection) && $managesection['blogs']) || empty($managesection))
+            @if (checkFeature('blog') && $vcard->blogs->count())
+                <div class="blog-section px-20 pt-40 position-relative overflow-hidden">
+                    <div class="bg-vector bg-vector-1 end-20">
+                        <img src="{{ asset('assets/img/vcard42/bg-vector-1.png') }}" alt>
+                    </div>
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.feature.blog') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="vector-all vector-4">
+                        <img src="{{ asset('assets/img/vcard42/vector-4.png') }}" alt="image" class="w-100 h-100">
+                    </div>
+                    <div class="blog-slider @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') blog-rtl @endif">
+                        @foreach ($vcard->blogs as $blog)
+                            @php
+                                $vcardBlogUrl = $isCustomDomainUse
+                                    ? "https://{$customDomain->domain}/{$vcard->url_alias}/blog/{$blog->id}"
+                                    : route('vcard.show-blog', [$vcard->url_alias, $blog->id]);
+                            @endphp
+                            <div>
+                                <div class="blog-card overflow-hidden position-relative">
+                                    <div class="d-block d-sm-flex align-items-center gap-4 blog-content-wrapper">
+                                        <div class="blog-img">
+                                            <a href="{{ $vcardBlogUrl }}" class="blog-img d-block">
+                                                <img src="{{ $blog->blog_icon }}" alt="{{ $blog->title }}"
+                                                    class="w-100 h-100 object-fit-cover">
+                                            </a>
+                                            <div class="top-left-img">
+                                                <img src="{{ asset('assets/img/vcard42/top-left-img.png') }}"
+                                                    alt="image" class="w-100 h-100 rounded-0">
+                                            </div>
+                                        </div>
+                                        <div class="blog-content">
+                                            <a href="{{ $vcardBlogUrl }}">
+                                                <h3 class="fw-semibold">{{ $blog->title }}</h3>
+                                                <span class="line mb-2"></span>
+                                                <p class="blog-desc mb-2">
+                                                    {!! Illuminate\Support\Str::words(str_replace('&nbsp;', ' ', strip_tags($blog->description)), 25, '...') !!}
+                                                </p>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="top-img position-absolute">
+                                        <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}" alt="image"
+                                            class="w-100 h-100">
+                                    </div>
+                                    <div class="blog-read-more">
+                                        <a href="{{ $vcardBlogUrl }}"
+                                            class="btn-primary">{{ __('messages.vcard_11.read_more') }}
+                                            <svg width="14" height="14" fill="#ffffff" version="1.1"
+                                                id="Layer_1" xmlns="http://www.w3.org/2000/svg"
+                                                xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                viewBox="-59.04 -59.04 610.08 610.08" xml:space="preserve"
+                                                stroke="#ffffff" stroke-width="49.2004">
+                                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round"
+                                                    stroke-linejoin="round"></g>
+                                                <g id="SVGRepo_iconCarrier">
+                                                    <g>
+                                                        <g>
+                                                            <path
+                                                                d="M382.678,226.804L163.73,7.86C158.666,2.792,151.906,0,144.698,0s-13.968,2.792-19.032,7.86l-16.124,16.12 c-10.492,10.504-10.492,27.576,0,38.064L293.398,245.9l-184.06,184.06c-5.064,5.068-7.86,11.824-7.86,19.028 c0,7.212,2.796,13.968,7.86,19.04l16.124,16.116c5.068,5.068,11.824,7.86,19.032,7.86s13.968-2.792,19.032-7.86L382.678,265 c5.076-5.084,7.864-11.872,7.848-19.088C390.542,238.668,387.754,231.884,382.678,226.804z">
+                                                            </path>
+                                                        </g>
+                                                    </g>
+                                                </g>
+                                            </svg>
+                                        </a>
+                                    </div>
+                                    <div class="service-content-bg">
+                                        <img src="{{ asset('assets/img/vcard42/blog-content-bg.png') }}" alt="image"
+                                            class="w-100">
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- buisness hours --}}
+        @if ((isset($managesection) && $managesection['business_hours']) || empty($managesection))
+            @if (checkFeature('business_hours') && $vcard->businessHours->count())
+                <div class="business-hour-section pt-40 px-20 position-relative overflow-hidden">
+                    <div class="vector-9 vector-all">
+                        <img src="{{ asset('assets/img/vcard42/vector-9.png') }}" alt>
+                    </div>
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.business.business_hours') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="row mx-0 row-gap-20 business-cards justify-content-center">
+                        @foreach ($businessDaysTime as $key => $dayTime)
+                            <div class="col-sm-6 px-10">
+                                <div class="business-box text-center">
+                                    <span class="calender-img">
+                                        <img src="{{ asset('assets/img/vcard42/calender.svg') }}" alt="image"
+                                            class="pb-1" />
+                                    </span>
+                                    <div class="business-content">
+                                        <h3 class="fs-16">{{ __('messages.business.' . \App\Models\BusinessHour::DAY_OF_WEEK[$key]) }}</h3>
+                                        <p class="fs-16">{{ $dayTime ?? __('messages.common.closed') }}</p>
+                                    </div>
+                                    <div class="business-bg-img">
+                                        <img src="{{ asset('assets/img/vcard42/business-bg.png') }}" alt="image"
+                                            class="w-100">
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- qrcode --}}
+        @if (isset($vcard['show_qr_code']) && $vcard['show_qr_code'] == 1)
+            <div class="qr-code-section pt-40 px-30 position-relative">
+                <div class="bg-vector bg-vector-3 position-absolute">
+                    <img src="{{ asset('assets/img/vcard42/bg-vector-3.png') }}" alt="" class="w-100" />
+                </div>
+                <div class="d-flex align-items-center title justify-content-center">
+                    <span class="title-line left-line"></span>
+                    <h5>{{ __('messages.vcard.qr_code') }}</h5>
+                    <span class="title-line right-line"></span>
+                    <span class="title-top-img">
+                        <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                stroke="#EB8001" />
+                        </svg>
+                    </span>
+                    <span class="title-bottom-img">
+                        <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                stroke="#172C4B" />
+                        </svg>
+                    </span>
+                </div>
+                <div class="qr-code-box d-flex align-items-center gap-3 flex-column flex-sm-row text-sm-start text-center position-relative @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') text-sm-end @else text-sm-start @endif"
+                    @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') dir="rtl" @endif>
+                    <div class="qr-img" id="qr-code-fourty">
+                        @php
+                            $qrMedia = $vcard->getMedia(\App\Models\Vcard::QRCODE_PATH)->first();
+                        @endphp
+                        @if ($qrMedia)
+                            <img src="{{ $qrMedia->getUrl() }}" alt="QR Code" width="120" height="120" />
+                        @else
+                            @if (isset($customQrCode['applySetting']) && $customQrCode['applySetting'] == 1)
+                                {!! QrCode::color(
+                                    $qrcodeColor['qrcodeColor']->red(),
+                                    $qrcodeColor['qrcodeColor']->green(),
+                                    $qrcodeColor['qrcodeColor']->blue(),
+                                )->backgroundColor(
+                                        $qrcodeColor['background_color']->red(),
+                                        $qrcodeColor['background_color']->green(),
+                                        $qrcodeColor['background_color']->blue(),
+                                    )->style($customQrCode['style'])->eye($customQrCode['eye_style'])->size(120)->format('svg')->generate(Request::url()) !!}
+                            @else
+                                {!! QrCode::size(120)->format('svg')->generate(Request::url()) !!}
+                            @endif
+                        @endif
+                    </div>
+                    <div class="qr-content">
+                        <h5 class="fw-semibold pb-2">{{ __('messages.vcard.scan_to_contact') }}</h5>
+                        <p class="fs-14">
+                            {{ __('messages.vcard.qr_section_desc') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        {{-- iframe section --}}
+        @if ((isset($managesection) && $managesection['iframe']) || empty($managesection))
+            @if (checkFeature('iframes') && $vcard->iframes->count())
+                <div class="iframe-section px-20 py-30 position-relative overflow-hidden">
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.vcard.iframe') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="vector-all vector-4">
+                        <img src="{{ asset('assets/img/vcard42/vector-4.png') }}" alt="image"
+                            class="w-100 h-100">
+                    </div>
+
+                    <div class="iframe-slider mt-4">
+                        @foreach ($vcard->iframes as $iframe)
+                            <div class="p-2">
+                                <div class="iframe-box">
+                                    <iframe class="w-100 h-100" src="{{ $iframe->url }}" frameborder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowfullscreen></iframe>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- payment link --}}
+        @if ((isset($managesection) && $managesection['payment_link']) || empty($managesection))
+            @if (checkFeature('payment_link') && $vcard->paymentLinks->count())
+                <div class="payment-link-section px-20 py-30 mt-40 position-relative overflow-hidden">
+                    <div class="vector-7 vector-all">
+                        <img src="{{ asset('assets/img/vcard42/vector-7.png') }}" alt class="w-100 h-100">
+                    </div>
+                    <div class="d-flex align-items-center title justify-content-center">
+                        <span class="title-line left-line"></span>
+                        <h5>{{ __('messages.vcard.payment_link') }}</h5>
+                        <span class="title-line right-line"></span>
+                        <span class="title-top-img">
+                            <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                    stroke="#EB8001" />
+                            </svg>
+                        </span>
+                        <span class="title-bottom-img">
+                            <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                    stroke="#172C4B" />
+                            </svg>
+                        </span>
+                    </div>
+
+                    <div class="payment-link-slider mt-4">
+                        @foreach ($vcard->paymentLinks as $paymentLink)
+                            @php
+                                $iconUrl = optional($paymentLink->getMedia('vcards/payment_link_image')->first())->getUrl();
+                                $paymentLinkData = getPaymentLinkUrl($paymentLink);
+                                $linkUrl = $paymentLinkData['linkUrl'];
+                                $isImageType = $paymentLinkData['isImageType'];
+                            @endphp
+                            <div class="slide px-2 pb-4">
+                                <div class="pl-strip position-relative overflow-hidden">
+                                    <div class="pl-strip-icon">
+                                        <img src="{{ $iconUrl }}" alt="{{ $paymentLink->label }}">
+                                    </div>
+
+                                    <div class="pl-strip-content">
+                                        <h4 class="pl-strip-title fw-semibold">{{ Illuminate\Support\Str::limit($paymentLink->label, 25, '...') }}</h4>
+                                        @if (!($isImageType || $paymentLink->display_type == \App\Models\VcardPaymentLink::UPI || $paymentLink->display_type == \App\Models\VcardPaymentLink::LINK))
+                                            <p class="pl-strip-desc mb-0 fs-14">
+                                                {{ Illuminate\Support\Str::words($paymentLink->description, 12, '...') }}
+                                            </p>
+                                        @endif
+                                    </div>
+
+                                    <div class="pl-strip-action">
+                                        @if ($paymentLink->display_type == \App\Models\VcardPaymentLink::UPI)
+                                            <a href="{{ $linkUrl }}" class="js-upi-pay pl-strip-btn btn-primary d-inline-block d-md-none"
+                                                data-upi-url="{{ $linkUrl }}"> {{ __('messages.vcard.pay') }} </a>
+                                        @elseif($paymentLink->display_type == \App\Models\VcardPaymentLink::LINK)
+                                            <a href="{{ $linkUrl }}" target="_blank" class="pl-strip-badge link-icon-btn btn-primary d-inline-block">
+                                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                            </a>
+                                        @elseif($isImageType)
+                                            <div class="p-0">
+                                                <img src="{{ $linkUrl }}" alt="{{ $paymentLink->label }}" class="img-fluid rounded pl-strip-content-img">
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="top-img position-absolute">
+                                        <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}" alt="image"
+                                            class="w-100 h-100">
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- contact us --}}
+        @php
+            $currentSubs = $vcard
+                ->subscriptions()
+                ->where('status', \App\Models\Subscription::ACTIVE)
+                ->latest()
+                ->first();
+        @endphp
+        @if ($currentSubs && $currentSubs->plan->planFeature->enquiry_form && $vcard->enable_enquiry_form)
+            <div class="contact-us-section px-30 py-30 mt-40 position-relative overflow-hidden">
+                <div class="bg-vector-7 bg-vector">
+                    <img src="{{ asset('assets/img/vcard42/bg-vector-4.png') }}" alt class="w-100">
+                </div>
+                <div class="vector-8 vector-all">
+                    <img src="{{ asset('assets/img/vcard42/vector-8.png') }}" alt class="w-100 h-100">
+                </div>
+                <div class="d-flex align-items-center title justify-content-center">
+                    <span class="title-line left-line"></span>
+                    <h5>{{ __('messages.contact_us.inquries') }}</h5>
+                    <span class="title-line right-line"></span>
+                    <span class="title-top-img">
+                        <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                stroke="#EB8001" />
+                        </svg>
+                    </span>
+                    <span class="title-bottom-img">
+                        <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                stroke="#172C4B" />
+                        </svg>
+                    </span>
+                </div>
+                <div class="contact-form position-relative overflow-hidden" @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') dir="rtl" @endif>
+                    <form id="enquiryForm" enctype="multipart/form-data">
+                        @csrf
+                        <div id="enquiryError" class="alert alert-danger d-none"></div>
+                        <div class="row row-gap-20 px-sm-4 px-3 pt-4">
+                            <div class="col-12">
+                                <input type="text" class="form-control text-gray fs-16 fw-5" name="name"
+                                    placeholder="{{ __('messages.form.your_name') }}" />
+                            </div>
+                            <div class="col-12">
+                                <input type="email" class="form-control text-gray fs-16 fw-5" name="email"
+                                    placeholder="{{ __('messages.form.your_email') }}" />
+                            </div>
+                            <div class="col-12">
+                                <input type="number" class="form-control text-gray fs-16 fw-5" name="phone"
+                                    onkeyup="if (/\D/g.test(this.value)) this.value = this.value.replace(/\D/g,'')"
+                                    placeholder="{{ __('messages.form.phone') }}" />
+                            </div>
+                            <div class="col-12">
+                                <textarea class="form-control text-gray fs-16 fw-5" name="message"
+                                    placeholder="{{ __('messages.form.type_message') }}" rows="3"></textarea>
+                            </div>
+
+                            @if (isset($inquiry) && $inquiry == 1)
+                                <div class="col-12">
+                                    <div class="wrapper-file-input">
+                                        <div class="upload-file py-2 px-0 bg-white border-0" id="fileInputTrigger">
+                                            <input type="file" id="attachment" name="attachment" hidden multiple accept=".jpg, .jpeg, .png" />
+                                            <div class="cstm-file-upload d-flex align-items-center justify-content-center gap-2 py-3">
+                                                <svg class="svg-inline--fa fa-upload" aria-hidden="true" focusable="false"
+                                                    data-prefix="fas" data-icon="upload" role="img"
+                                                    xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg>
+                                                    <path fill="#0d5143"
+                                                        d="M105.4 182.6c12.5 12.49 32.76 12.5 45.25 .001L224 109.3V352c0 17.67 14.33 32 32 32c17.67 0 32-14.33 32-32V109.3l73.38 73.38c12.49 12.49 32.75 12.49 45.25-.001c12.49-12.49 12.49-32.75 0-45.25l-128-128C272.4 3.125 264.2 0 256 0S239.6 3.125 233.4 9.375L105.4 137.4C92.88 149.9 92.88 170.1 105.4 182.6zM480 352h-160c0 35.35-28.65 64-64 64s-64-28.65-64-64H32c-17.67 0-32 14.33-32 32v96c0 17.67 14.33 32 32 32h448c17.67 0 32-14.33 32-32v-96C512 366.3 497.7 352 480 352zM432 456c-13.2 0-24-10.8-24-24c0-13.2 10.8-24 24-24s24 10.8 24 24C456 445.2 445.2 456 432 456z">
+                                                    </path>
+                                                </svg>
+                                                {{ __('messages.choose_file') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="wrapper-file-section">
+                                        <div class="selected-files" id="selectedFilesSection" style="display: none;">
+                                            <h6 class="text-primary">{{ __('messages.selected_files') }}</h6>
+                                            <ul class="file-list" id="fileList"></ul>
+                                        </div>
+                                    </div>
+                                    <span class="fs-12 text-muted">{{ __('messages.file_supported') }}</span>
+                                </div>
+                            @endif
+
+                            @if (!empty($vcard->privacy_policy) || !empty($vcard->term_condition))
+                                <div class="col-12">
+                                    <div class="d-flex gap-2 align-items-start">
+                                        <input type="checkbox" name="terms_condition"
+                                            class="form-check-input terms-condition mt-1" id="termConditionCheckbox">
+                                        <label class="form-check-label fs-14" for="termConditionCheckbox">
+                                            {{ __('messages.vcard.agree_to_our') }}
+                                            <a href="{{ $vcardPrivacyAndTerm }}" target="_blank"
+                                                class="text-primary text-decoration-underline">
+                                                {{ __('messages.vcard.term_and_condition') }}
+                                            </a> &
+                                            <a href="{{ $vcardPrivacyAndTerm }}" target="_blank"
+                                                class="text-primary text-decoration-underline">
+                                                {{ __('messages.vcard.privacy_policy') }}
+                                            </a>
+                                        </label>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                        <div class="col-12 position-relative contact-icon-box">
+                            <img src="{{ asset('assets/img/vcard42/blog-content-bg.png') }}" alt="img"
+                                class="w-100">
+                            <div class="position-absolute bottom-0 start-50 translate-middle-x pb-sm-4 pb-2">
+                                <button type="submit" class="btn-primary send-msg">{{ __('messages.contact_us.send_message') }}</button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="top-img position-absolute">
+                        <img src="{{ asset('assets/img/vcard42/card-top-img.png') }}" alt>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        {{-- newslatter modal --}}
+        @if ((isset($managesection) && $managesection['news_latter_popup']) || empty($managesection))
+            <div class="modal fade" id="newsLatterModal" tabindex="-1" aria-labelledby="newsLatterModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog news-modal modal-dialog-centered">
+                    <div class="modal-content animate-bottom" id="newsLatter-content">
+                        <div class="newsmodal-header px-0 position-relative">
+                            <h1 class="newsmodal-title">{{ __('messages.vcard.subscribe_newslatter') }}</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                                id="closeNewsLatterModal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="modal-desc text-start">
+                                {{ __('messages.vcard.update_directly') }}</p>
+                            <form action="" method="post" id="newsLatterForm">
+                                @csrf
+                                <input type="hidden" name="vcard_id" value="{{ $vcard->id }}">
+                                <div
+                                    class="mb-1 mt-3 d-flex gap-1 justify-content-center align-items-center email-input">
+                                    <div class="w-100">
+                                        <input type="email" class="form-control email-input w-100"
+                                            placeholder="{{ __('messages.form.enter_your_email') }}"
+                                            aria-label="Email" name="email" id="emailSubscription"
+                                            aria-describedby="button-addon2">
+                                    </div>
+                                    <button class="btn ms-1" type="submit"
+                                        id="email-send">{{ __('messages.subscribe') }}</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        {{-- create your vcard --}}
+        @if ($currentSubs && $currentSubs->plan->planFeature->affiliation && $vcard->enable_affiliation)
+            <div class="create-your-vcard px-30 pt-40 position-relative overflow-hidden">
+                <div class="bg-vector-8 bg-vector">
+                    <img src="{{ asset('assets/img/vcard42/bg-vector-5.png') }}" alt class="w-100">
+                </div>
+                <div class="vector-7 vector-all">
+                    <img src="{{ asset('assets/img/vcard42/vector-7.png') }}" alt class="w-100 h-100">
+                </div>
+                <div class="d-flex align-items-center title justify-content-center">
+                    <span class="title-line left-line"></span>
+                    <h5>{{ __('messages.create_vcard') }}</h5>
+                    <span class="title-line right-line"></span>
+                    <span class="title-top-img">
+                        <svg width="55" height="12" viewBox="0 0 55 12" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M0.272278 10.7206C21.3555 -2.96899 33.1925 -2.84469 54.2723 10.7206"
+                                stroke="#EB8001" />
+                        </svg>
+                    </span>
+                    <span class="title-bottom-img">
+                        <svg width="39" height="6" viewBox="0 0 39 6" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M0.214417 0.451721C13.5581 6.78522 24.7885 7.55479 38.2144 0.451721"
+                                stroke="#172C4B" />
+                        </svg>
+                    </span>
+                </div>
+                <div class="cart position-relative overflow-hidden" @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') dir="rtl" @endif>
+                    <div class="cart-bg position-absolute top-0 end-0">
+                        <img src="{{ asset('assets/img/vcard42/vcard-top-img.png') }}" alt="vcard top image">
+                    </div>
+                    <a href="{{ config('app.url') . '/register?referral-code=' . $vcard->user->affiliate_code }}"
+                        class="create-vcard bg-white fs-16 fw-5">
+                        <span class="text-break w-100 d-block">{{ route('register', ['referral-code' => $vcard->user->affiliate_code]) }}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"
+                            fill="none">
+                            <path
+                                d="M14.3965 7.95047H13.2665C13.0325 7.95047 12.8428 8.14019 12.8428 8.37421V13.5261C12.8428 13.7996 12.6203 14.0221 12.3468 14.0221H2.47324C2.19984 14.0221 1.97746 13.7996 1.97746 13.5261V3.65272C1.97746 3.37921 2.19984 3.15666 2.47324 3.15666H7.88893C8.12295 3.15666 8.31267 2.96693 8.31267 2.73292V1.60294C8.31267 1.36892 8.12295 1.1792 7.88893 1.1792H2.47324C1.10947 1.1792 0 2.28884 0 3.65272V13.5262C0 14.89 1.10952 15.9996 2.47324 15.9996H12.3467C13.7106 15.9996 14.8202 14.89 14.8202 13.5262V8.37427C14.8203 8.14019 14.6305 7.95047 14.3965 7.95047Z"
+                                fill="#eb8001"></path>
+                            <path
+                                d="M15.5764 0.000488281H11.0818C10.8477 0.000488281 10.658 0.190211 10.658 0.424229V1.55421C10.658 1.78822 10.8477 1.97795 11.0818 1.97795H12.6244L6.81943 7.7828C6.65394 7.94829 6.65394 8.21655 6.81943 8.38209L7.61843 9.18115C7.69793 9.26064 7.80567 9.30528 7.9181 9.30528C8.03048 9.30528 8.13828 9.26064 8.21772 9.18115L14.0227 3.37618V4.91877C14.0227 5.15278 14.2124 5.34251 14.4464 5.34251H15.5764C15.8104 5.34251 16.0001 5.15278 16.0001 4.91877V0.424229C16.0001 0.190211 15.8104 0.000488281 15.5764 0.000488281Z"
+                                fill="#eb8001"></path>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        @endif
+
+        <div class="dashed-border"></div>
+
+        {{-- map --}}
+        @if ((isset($managesection) && $managesection['map']) || empty($managesection))
+            @if ($vcard->location_url)
+                @php $url = explode('/', $vcard->location_url); @endphp
+                @if (isset($url[5]))
+                    <div class="map-section pt-40 px-30 overflow-hidden" @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') dir="rtl" @endif>
+                        <div class="location-section overflow-hidden">
+                            <div class="map-name position-relative overflow-hidden">
+                                <div class="d-flex gap-3 align-items-center location-name">
+                                    <div class="location-img">
+                                        <img src="{{ asset('assets/img/vcard42/location.svg') }}" alt />
+                                    </div>
+                                    <span class="text-white fs-16 fw-5 address-text">{{ $vcard->location }}</span>
+                                </div>
+                                <div class="location-top-img position-absolute top-0 start-0 w-100">
+                                    <img src="{{ asset('assets/img/vcard42/blog-content-bg.png') }}" alt="img"
+                                        class="h-100 w-100"
+                                        @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') style="rotate: 180deg;" @else style="transform: scaleY(-1);" @endif />
+                                </div>
+                            </div>
+                            <div class="map-iframe">
+                                <iframe src="https://maps.google.de/maps?q={{ $url[5] }}/&output=embed"
+                                    class="w-100 h-100" frameborder="0"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            @endif
+            @if ($vcard->location_type == 1 && !empty($vcard->location_embed_tag))
+                <div class="map-section pt-40 px-30 overflow-hidden" @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') dir="rtl" @endif>
+                    <div class="location-section overflow-hidden">
+                        <div class="map-name position-relative overflow-hidden">
+                            <div class="d-flex gap-3 align-items-center location-name">
+                                <div class="location-img">
+                                    <img src="{{ asset('assets/img/vcard42/location.svg') }}" alt />
+                                </div>
+                                <span class="text-white fs-16 fw-5 pb-4 address-text">{{ $vcard->location }}</span>
+                            </div>
+                            <div class="location-top-img position-absolute top-0 start-0 w-100">
+                                <img src="{{ asset('assets/img/vcard42/blog-content-bg.png') }}" alt="img"
+                                    class="h-100 w-100"
+                                    @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') style="rotate: 180deg;" @else style="transform: scaleY(-1);" @endif />
+                            </div>
+                        </div>
+                        <div class="map-embed">
+                            <div class="embed-responsive embed-responsive-16by9 rounded overflow-hidden justify-content-center d-flex">
+                                {!! $vcard->location_embed_tag ?? '' !!}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        {{-- sticky buttons --}}
+        <div class="position-relative">
+            <div class="sticky-btn btn-section @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') rtl @endif">
+                <div class="fixed-btn-section">
+                    @if (empty($vcard->hide_stickybar))
+                        <div
+                            class="architect-bars-btn bars-btn @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') vcard-bars-btn-left @endif">
+                            <svg width="25" height="25" viewBox="0 0 25 25" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M15.4134 0.540771H22.489C23.572 0.540771 24.4601 1.42891 24.4601 2.51188V9.5875C24.4601 10.6776 23.5731 11.5586 22.489 11.5586H15.4134C14.3222 11.5586 13.4423 10.6787 13.4423 9.5875V2.51188C13.4423 1.42783 14.3233 0.540771 15.4134 0.540771Z"
+                                    stroke="#ffffff" />
+                                <path
+                                    d="M2.97143 0.5H8.74589C10.1129 0.5 11.2173 1.6122 11.2173 2.97143V8.74589C11.2173 10.1139 10.1139 11.2173 8.74589 11.2173H2.97143C1.6122 11.2173 0.5 10.1129 0.5 8.74589V2.97143C0.5 1.61328 1.61328 0.5 2.97143 0.5Z"
+                                    stroke="#ffffff" />
+                                <path
+                                    d="M2.97143 13.783H8.74589C10.1139 13.783 11.2173 14.8863 11.2173 16.2544V22.0289C11.2173 23.3881 10.1129 24.5003 8.74589 24.5003H2.97143C1.61328 24.5003 0.5 23.387 0.5 22.0289V16.2544C0.5 14.8874 1.6122 13.783 2.97143 13.783Z"
+                                    stroke="#ffffff" />
+                                <path
+                                    d="M16.2537 13.783H22.0282C23.3874 13.783 24.4996 14.8874 24.4996 16.2544V22.0289C24.4996 23.387 23.3863 24.5003 22.0282 24.5003H16.2537C14.8867 24.5003 13.7823 23.3881 13.7823 22.0289V16.2544C13.7823 14.8863 14.8856 13.783 16.2537 13.783Z"
+                                    stroke="#ffffff" />
+                            </svg>
+                        </div>
+
+                        <div class="sub-btn d-none">
+                            <div class="sub-btn-div @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') sub-btn-div-left @endif">
+                                @if ($vcard->whatsapp_share)
+                                    <div class="icon-search-container mb-3" data-ic-class="search-trigger">
+                                        <div class="wp-btn">
+                                            <i class="fab text-light  fa-whatsapp fa-2x" id="wpIcon"></i>
+                                        </div>
+                                        <input type="number" class="search-input" id="wpNumber"
+                                            data-ic-class="search-input"
+                                            placeholder="{{ __('messages.setting.wp_number') }}" />
+                                        <div class="share-wp-btn-div">
+                                            <a href="javascript:void(0)"
+                                                class="vcard42-sticky-btn vcard42-btn-group d-flex justify-content-center align-items-center rounded-0 text-decoration-none py-1 rounded-pill justify-content share-wp-btn">
+                                                <i class="fa-solid fa-paper-plane"></i> </a>
+                                        </div>
+                                    </div>
+                                @endif
+                                @if (empty($vcard->hide_stickybar))
+                                    <div
+                                        class="{{ isset($vcard->whatsapp_share) ? 'vcard42-btn-group' : 'stickyIcon' }}">
+                                        <button type="button"
+                                            class="vcard42-btn-group vcard42-share vcard42-sticky-btn mb-3"><i
+                                                class="fas fa-share-alt fs-4 pt-1"></i></button>
+                                        @if($vcard->show_qr_code)
+                                            @if (!empty($vcard->enable_download_qr_code))
+                                                <a type="button"
+                                                    class="vcard42-btn-group vcard42-sticky-btn d-flex justify-content-center no-hover align-items-center text-decoration-none px-2 mb-3 py-2"
+                                                    id="qr-code-btn" download="qr_code.png"><i
+                                                        class="fa-solid fa-qrcode fs-4"></i></a>
+                                            @endif
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        {{-- made by --}}
+        <div class="d-flex justify-content-evenly w-100 py-3">
+            @if (checkFeature('advanced'))
+                @if (checkFeature('advanced')->hide_branding && $vcard->branding == 0)
+                    @if ($vcard->made_by)
+                        <a @if (!is_null($vcard->made_by_url)) href="{{ $vcard->made_by_url }}" @endif
+                            class="text-center text-decoration-none text-primary fw-5" target="_blank">
+                            <small>{{ __('messages.made_by') }} {{ $vcard->made_by }}</small>
+                        </a>
+                    @else
+                        <div class="text-center">
+                            <small class="text-primary fw-5">{{ __('messages.made_by') }}
+                                {{ $setting['app_name'] }}</small>
+                        </div>
+                    @endif
+                @endif
+            @else
+                @if ($vcard->made_by)
+                    <a @if (!is_null($vcard->made_by_url)) href="{{ $vcard->made_by_url }}" @endif
+                        class="text-center text-decoration-none text-primary fw-5" target="_blank">
+                        <small>{{ __('messages.made_by') }} {{ $vcard->made_by }}</small>
+                    </a>
+                @else
+                    <div class="text-center">
+                        <small class="text-primary fw-5">{{ __('messages.made_by') }}
+                            {{ $setting['app_name'] }}</small>
+                    </div>
+                @endif
+            @endif
+            @if (!empty($vcard->privacy_policy) || !empty($vcard->term_condition))
+                <div>
+                    <a class="text-decoration-none text-primary fw-5 cursor-pointer terms-policies-btn"
+                        href="{{ route('vcard.show-privacy-policy', [$vcard->url_alias, $vcard->id]) }}"><small>{!! __('messages.vcard.term_policy') !!}</small></a>
+                </div>
+            @endif
+        </div>
+
+        {{-- add to contact --}}
+        @if ($vcard->enable_contact)
+            <div class="w-100 d-flex justify-content-center sticky-vcard-div" style="bottom: 60px">
+                <div class="">
+                    @if ($contactRequest == 1)
+                        <a href="{{ Auth::check() ? route('add-contact', $vcard->id) : 'javascript:void(0);' }}"
+                            class="add-contact-btn d-flex justify-content-center ms-0 align-items-center text-decoration-none justify-content-center {{ Auth::check() ? 'auth-contact-btn' : 'ask-contact-detail-form' }}"
+                            data-action="{{ Auth::check() ? route('contact-request.store') : 'show-modal' }}"
+                            type="submit">
+                            <svg class="svg-inline--fa fa-address-book" aria-hidden="true" focusable="false"
+                                data-prefix="fas" data-icon="address-book" role="img"
+                                xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg="">
+                                <path fill="currentColor"
+                                    d="M384 0H96C60.65 0 32 28.65 32 64v384c0 35.35 28.65 64 64 64h288c35.35 0 64-28.65 64-64V64C448 28.65 419.3 0 384 0zM240 128c35.35 0 64 28.65 64 64s-28.65 64-64 64c-35.34 0-64-28.65-64-64S204.7 128 240 128zM336 384h-192C135.2 384 128 376.8 128 368C128 323.8 163.8 288 208 288h64c44.18 0 80 35.82 80 80C352 376.8 344.8 384 336 384zM496 64H480v96h16C504.8 160 512 152.8 512 144v-64C512 71.16 504.8 64 496 64zM496 192H480v96h16C504.8 288 512 280.8 512 272v-64C512 199.2 504.8 192 496 192zM496 320H480v96h16c8.836 0 16-7.164 16-16v-64C512 327.2 504.8 320 496 320z">
+                                </path>
+                            </svg>
+                            {{ __('messages.setting.add_contact') }}
+                        </a>
+                    @else
+                        <a href="{{ route('add-contact', $vcard->id) }}"
+                            class="add-contact-btn d-flex justify-content-center ms-0 align-items-center text-decoration-none justify-content-center"
+                            type="submit">
+                            <svg class="svg-inline--fa fa-address-book" aria-hidden="true" focusable="false"
+                                data-prefix="fas" data-icon="address-book" role="img"
+                                xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg="">
+                                <path fill="currentColor"
+                                    d="M384 0H96C60.65 0 32 28.65 32 64v384c0 35.35 28.65 64 64 64h288c35.35 0 64-28.65 64-64V64C448 28.65 419.3 0 384 0zM240 128c35.35 0 64 28.65 64 64s-28.65 64-64 64c-35.34 0-64-28.65-64-64S204.7 128 240 128zM336 384h-192C135.2 384 128 376.8 128 368C128 323.8 163.8 288 208 288h64c44.18 0 80 35.82 80 80C352 376.8 344.8 384 336 384zM496 64H480v96h16C504.8 160 512 152.8 512 144v-64C512 71.16 504.8 64 496 64zM496 192H480v96h16C504.8 288 512 280.8 512 272v-64C512 199.2 504.8 192 496 192zM496 320H480v96h16c8.836 0 16-7.164 16-16v-64C512 327.2 504.8 320 496 320z">
+                                </path>
+                            </svg>
+                            {{ __('messages.setting.add_contact') }}
+                        </a>
+                    @endif
+                </div>
+            </div>
+            @include('vcardTemplates.contact-request')
+        @endif
+
+        {{-- share modal code --}}
+        <div id="vcard42-shareModel" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" @if (getLanguage($vcard->default_language) == 'Arabic' || getLanguage($vcard->default_language) == 'Persian') dir="rtl" @endif>
+                    <div class="">
+                        <div class="row align-items-center mt-3">
+                            <div class="col-10 text-center">
+                                <h4 class="modal-title pl-50 fs-20">
+                                    {{ __('messages.vcard.share_my_vcard') }}</h4>
+                            </div>
+                            <div class="col-2 p-0 text-center">
+                                <button type="button" aria-label="Close"
+                                    class="btn btn-sm btn-icon btn-active-color-danger border-none p-0"
+                                    data-bs-dismiss="modal">
+                                    <span class="svg-icon svg-icon-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px"
+                                            viewBox="0 0 24 24" version="1.1">
+                                            <g transform="translate(12.000000, 12.000000) rotate(-45.000000) translate(-12.000000, -12.000000) translate(4.000000, 4.000000)"
+                                                fill="#000000">
+                                                <rect fill="#000000" x="0" y="7" width="16" height="2"
+                                                    rx="1" />
+                                                <rect fill="#000000" opacity="0.5"
+                                                    transform="translate(8.000000, 8.000000) rotate(-270.000000) translate(-8.000000, -8.000000)"
+                                                    x="0" y="7" width="16" height="2" rx="1" />
+                                            </g>
+                                        </svg>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    @php
+                        $shareUrl = $vcardUrl;
+                    @endphp
+                    <div class="modal-body">
+                        <a href="http://www.facebook.com/sharer.php?u={{ $shareUrl }}" target="_blank"
+                            class="text-decoration-none share" title="Facebook">
+                            <div class="row">
+                                <div class="col-2 mb-3">
+                                    <i class="fab fa-facebook fa-2x" style="color: #1B95E0"></i>
+
+                                </div>
+                                <div class="col-9 p-1 mb-3">
+                                    <p class="align-items-center text-dark">
+                                        {{ __('messages.social.Share_on_facebook') }}</p>
+                                </div>
+                                <div class="col-1 p-1 mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow" version="1.0"
+                                        height="16px" viewBox="0 0 512.000000 512.000000"
+                                        preserveAspectRatio="xMidYMid meet">
+                                        <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)"
+                                            fill="#000000" stroke="none">
+                                            <path
+                                                d="M1277 4943 l-177 -178 1102 -1102 1103 -1103 -1103 -1103 -1102 -1102 178 -178 177 -177 1280 1280 1280 1280 -1280 1280 -1280 1280 -178 -177z" />
+                                        </g>
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="http://twitter.com/share?url={{ $shareUrl }}&text={{ $vcard->name }}&hashtags=sharebuttons"
+                            target="_blank" class="text-decoration-none share" title="Twitter">
+                            <div class="row">
+                                <div class="col-2 mb-3">
+
+                                    <span class="fa-2x"><svg xmlns="http://www.w3.org/2000/svg" height="1em"
+                                            viewBox="0 0 512 512">
+                                            <!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. -->
+                                            <path
+                                                d="M389.2 48h70.6L305.6 224.2 487 464H345L233.7 318.6 106.5 464H35.8L200.7 275.5 26.8 48H172.4L272.9 180.9 389.2 48zM364.4 421.8h39.1L151.1 88h-42L364.4 421.8z" />
+                                        </svg></span>
+
+                                </div>
+                                <div class="col-9 p-1 mb-3">
+                                    <p class="align-items-center text-dark">
+                                        {{ __('messages.social.Share_on_twitter') }}</p>
+                                </div>
+                                <div class="col-1 p-1 mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow" version="1.0"
+                                        height="16px" viewBox="0 0 512.000000 512.000000"
+                                        preserveAspectRatio="xMidYMid meet">
+                                        <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)"
+                                            fill="#000000" stroke="none">
+                                            <path
+                                                d="M1277 4943 l-177 -178 1102 -1102 1103 -1103 -1103 -1103 -1102 -1102 178 -178 177 -177 1280 1280 1280 1280 -1280 1280 -1280 1280 -178 -177z" />
+                                        </g>
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="http://www.linkedin.com/shareArticle?mini=true&url={{ $shareUrl }}"
+                            target="_blank" class="text-decoration-none share" title="Linkedin">
+                            <div class="row">
+                                <div class="col-2 mb-3">
+                                    <i class="fab fa-linkedin fa-2x" style="color: #1B95E0"></i>
+                                </div>
+                                <div class="col-9 p-1 mb-3">
+                                    <p class="align-items-center text-dark">
+                                        {{ __('messages.social.Share_on_linkedin') }}</p>
+                                </div>
+                                <div class="col-1 p-1 mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow" version="1.0"
+                                        height="16px" viewBox="0 0 512.000000 512.000000"
+                                        preserveAspectRatio="xMidYMid meet">
+                                        <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)"
+                                            fill="#000000" stroke="none">
+                                            <path
+                                                d="M1277 4943 l-177 -178 1102 -1102 1103 -1103 -1103 -1103 -1102 -1102 178 -178 177 -177 1280 1280 1280 1280 -1280 1280 -1280 1280 -178 -177z" />
+                                        </g>
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="mailto:?Subject=&Body={{ $shareUrl }}" target="_blank"
+                            class="text-decoration-none share" title="Email">
+                            <div class="row">
+                                <div class="col-2 mb-3">
+                                    <i class="fas fa-envelope fa-2x" style="color: #191a19  "></i>
+                                </div>
+                                <div class="col-9 p-1 mb-3">
+                                    <p class="align-items-center text-dark">
+                                        {{ __('messages.social.Share_on_email') }}</p>
+                                </div>
+                                <div class="col-1 p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow" version="1.0"
+                                        height="16px" viewBox="0 0 512.000000 512.000000"
+                                        preserveAspectRatio="xMidYMid meet">
+                                        <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)"
+                                            fill="#000000" stroke="none">
+                                            <path
+                                                d="M1277 4943 l-177 -178 1102 -1102 1103 -1103 -1103 -1103 -1102 -1102 178 -178 177 -177 1280 1280 1280 1280 -1280 1280 -1280 1280 -178 -177z" />
+                                        </g>
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="http://pinterest.com/pin/create/link/?url={{ $shareUrl }}" target="_blank"
+                            class="text-decoration-none share" title="Pinterest">
+                            <div class="row">
+                                <div class="col-2 mb-3">
+                                    <i class="fab fa-pinterest fa-2x" style="color: #bd081c"></i>
+                                </div>
+                                <div class="col-9 p-1 mb-3">
+                                    <p class="align-items-center text-dark">
+                                        {{ __('messages.social.Share_on_pinterest') }}</p>
+                                </div>
+                                <div class="col-1 p-1 mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow" version="1.0"
+                                        height="16px" viewBox="0 0 512.000000 512.000000"
+                                        preserveAspectRatio="xMidYMid meet">
+                                        <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)"
+                                            fill="#000000" stroke="none">
+                                            <path
+                                                d="M1277 4943 l-177 -178 1102 -1102 1103 -1103 -1103 -1103 -1102 -1102 178 -178 177 -177 1280 1280 1280 1280 -1280 1280 -1280 1280 -178 -177z" />
+                                        </g>
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="http://reddit.com/submit?url={{ $shareUrl }}&title={{ $vcard->name }}"
+                            target="_blank" class="text-decoration-none share" title="Reddit">
+                            <div class="row">
+                                <div class="col-2 mb-3">
+                                    <i class="fab fa-reddit fa-2x" style="color: #ff4500"></i>
+                                </div>
+                                <div class="col-9 p-1 mb-3">
+                                    <p class="align-items-center text-dark">
+                                        {{ __('messages.social.Share_on_reddit') }}</p>
+                                </div>
+                                <div class="col-1 p-1 mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow" version="1.0"
+                                        height="16px" viewBox="0 0 512.000000 512.000000"
+                                        preserveAspectRatio="xMidYMid meet">
+                                        <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)"
+                                            fill="#000000" stroke="none">
+                                            <path
+                                                d="M1277 4943 l-177 -178 1102 -1102 1103 -1103 -1103 -1103 -1102 -1102 178 -178 177 -177 1280 1280 1280 1280 -1280 1280 -1280 1280 -178 -177z" />
+                                        </g>
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="https://wa.me/?text={{ $shareUrl }}" target="_blank"
+                            class="text-decoration-none share" title="Whatsapp">
+                            <div class="row">
+                                <div class="col-2 mb-3">
+                                    <i class="fab fa-whatsapp fa-2x" style="color: limegreen"></i>
+                                </div>
+                                <div class="col-9 p-1 mb-3">
+                                    <p class="align-items-center text-dark">
+                                        {{ __('messages.social.Share_on_whatsapp') }}</p>
+                                </div>
+                                <div class="col-1 p-1 mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow" version="1.0"
+                                        height="16px" viewBox="0 0 512.000000 512.000000"
+                                        preserveAspectRatio="xMidYMid meet">
+                                        <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)"
+                                            fill="#000000" stroke="none">
+                                            <path
+                                                d="M1277 4943 l-177 -178 1102 -1102 1103 -1103 -1103 -1103 -1102 -1102 178 -178 177 -177 1280 1280 1280 1280 -1280 1280 -1280 1280 -178 -177z" />
+                                        </g>
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="https://www.snapchat.com/scan?attachmentUrl={{ $shareUrl }}" target="_blank"
+                            class="text-decoration-none share" title="Snapchat">
+                            <div class="row">
+                                <div class="col-2 mb-3">
+                                    <svg width="30px" height="30px" viewBox="147.353 39.286 514.631 514.631"
+                                        version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
+                                        xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve"
+                                        fill="#000000">
+                                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round">
+                                        </g>
+                                        <g id="SVGRepo_iconCarrier">
+                                            <path style="fill:#FFFC00;"
+                                                d="M147.553,423.021v0.023c0.308,11.424,0.403,22.914,2.33,34.268 c2.042,12.012,4.961,23.725,10.53,34.627c7.529,14.756,17.869,27.217,30.921,37.396c9.371,7.309,19.608,13.111,30.94,16.771 c16.524,5.33,33.571,7.373,50.867,7.473c10.791,0.068,21.575,0.338,32.37,0.293c78.395-0.33,156.792,0.566,235.189-0.484 c10.403-0.141,20.636-1.41,30.846-3.277c19.569-3.582,36.864-11.932,51.661-25.133c17.245-15.381,28.88-34.205,34.132-56.924 c3.437-14.85,4.297-29.916,4.444-45.035v-3.016c0-1.17-0.445-256.892-0.486-260.272c-0.115-9.285-0.799-18.5-2.54-27.636 c-2.117-11.133-5.108-21.981-10.439-32.053c-5.629-10.641-12.68-20.209-21.401-28.57c-13.359-12.81-28.775-21.869-46.722-26.661 c-16.21-4.327-32.747-5.285-49.405-5.27c-0.027-0.004-0.09-0.173-0.094-0.255H278.56c-0.005,0.086-0.008,0.172-0.014,0.255 c-9.454,0.173-18.922,0.102-28.328,1.268c-10.304,1.281-20.509,3.21-30.262,6.812c-15.362,5.682-28.709,14.532-40.11,26.347 c-12.917,13.386-22.022,28.867-26.853,46.894c-4.31,16.084-5.248,32.488-5.271,49.008">
+                                            </path>
+                                            <path style="fill:#FFFFFF;"
+                                                d="M407.001,473.488c-1.068,0-2.087-0.039-2.862-0.076c-0.615,0.053-1.25,0.076-1.886,0.076 c-22.437,0-37.439-10.607-50.678-19.973c-9.489-6.703-18.438-13.031-28.922-14.775c-5.149-0.854-10.271-1.287-15.22-1.287 c-8.917,0-15.964,1.383-21.109,2.389c-3.166,0.617-5.896,1.148-8.006,1.148c-2.21,0-4.895-0.49-6.014-4.311 c-0.887-3.014-1.523-5.934-2.137-8.746c-1.536-7.027-2.65-11.316-5.281-11.723c-28.141-4.342-44.768-10.738-48.08-18.484 c-0.347-0.814-0.541-1.633-0.584-2.443c-0.129-2.309,1.501-4.334,3.777-4.711c22.348-3.68,42.219-15.492,59.064-35.119 c13.049-15.195,19.457-29.713,20.145-31.316c0.03-0.072,0.065-0.148,0.101-0.217c3.247-6.588,3.893-12.281,1.926-16.916 c-3.626-8.551-15.635-12.361-23.58-14.882c-1.976-0.625-3.845-1.217-5.334-1.808c-7.043-2.782-18.626-8.66-17.083-16.773 c1.124-5.916,8.949-10.036,15.273-10.036c1.756,0,3.312,0.308,4.622,0.923c7.146,3.348,13.575,5.045,19.104,5.045 c6.876,0,10.197-2.618,11-3.362c-0.198-3.668-0.44-7.546-0.674-11.214c0-0.004-0.005-0.048-0.005-0.048 c-1.614-25.675-3.627-57.627,4.546-75.95c24.462-54.847,76.339-59.112,91.651-59.112c0.408,0,6.674-0.062,6.674-0.062 c0.283-0.005,0.59-0.009,0.908-0.009c15.354,0,67.339,4.27,91.816,59.15c8.173,18.335,6.158,50.314,4.539,76.016l-0.076,1.23 c-0.222,3.49-0.427,6.793-0.6,9.995c0.756,0.696,3.795,3.096,9.978,3.339c5.271-0.202,11.328-1.891,17.998-5.014 c2.062-0.968,4.345-1.169,5.895-1.169c2.343,0,4.727,0.456,6.714,1.285l0.106,0.041c5.66,2.009,9.367,6.024,9.447,10.242 c0.071,3.932-2.851,9.809-17.223,15.485c-1.472,0.583-3.35,1.179-5.334,1.808c-7.952,2.524-19.951,6.332-23.577,14.878 c-1.97,4.635-1.322,10.326,1.926,16.912c0.036,0.072,0.067,0.145,0.102,0.221c1,2.344,25.205,57.535,79.209,66.432 c2.275,0.379,3.908,2.406,3.778,4.711c-0.048,0.828-0.248,1.656-0.598,2.465c-3.289,7.703-19.915,14.09-48.064,18.438 c-2.642,0.408-3.755,4.678-5.277,11.668c-0.63,2.887-1.271,5.717-2.146,8.691c-0.819,2.797-2.641,4.164-5.567,4.164h-0.441 c-1.905,0-4.604-0.346-8.008-1.012c-5.95-1.158-12.623-2.236-21.109-2.236c-4.948,0-10.069,0.434-15.224,1.287 c-10.473,1.744-19.421,8.062-28.893,14.758C444.443,462.88,429.436,473.488,407.001,473.488">
+                                            </path>
+                                            <path style="fill:#020202;"
+                                                d="M408.336,124.235c14.455,0,64.231,3.883,87.688,56.472c7.724,17.317,5.744,48.686,4.156,73.885 c-0.248,3.999-0.494,7.875-0.694,11.576l-0.084,1.591l1.062,1.185c0.429,0.476,4.444,4.672,13.374,5.017l0.144,0.008l0.15-0.003 c5.904-0.225,12.554-2.059,19.776-5.442c1.064-0.498,2.48-0.741,3.978-0.741c1.707,0,3.521,0.321,5.017,0.951l0.226,0.09 c3.787,1.327,6.464,3.829,6.505,6.093c0.022,1.28-0.935,5.891-14.359,11.194c-1.312,0.518-3.039,1.069-5.041,1.7 c-8.736,2.774-21.934,6.96-26.376,17.427c-2.501,5.896-1.816,12.854,2.034,20.678c1.584,3.697,26.52,59.865,82.631,69.111 c-0.011,0.266-0.079,0.557-0.229,0.9c-0.951,2.24-6.996,9.979-44.612,15.783c-5.886,0.902-7.328,7.5-9,15.17 c-0.604,2.746-1.218,5.518-2.062,8.381c-0.258,0.865-0.306,0.914-1.233,0.914c-0.128,0-0.278,0-0.442,0 c-1.668,0-4.2-0.346-7.135-0.922c-5.345-1.041-12.647-2.318-21.982-2.318c-5.21,0-10.577,0.453-15.962,1.352 c-11.511,1.914-20.872,8.535-30.786,15.543c-13.314,9.408-27.075,19.143-48.071,19.143c-0.917,0-1.812-0.031-2.709-0.076 l-0.236-0.01l-0.237,0.018c-0.515,0.045-1.034,0.068-1.564,0.068c-20.993,0-34.76-9.732-48.068-19.143 c-9.916-7.008-19.282-13.629-30.791-15.543c-5.38-0.896-10.752-1.352-15.959-1.352c-9.333,0-16.644,1.428-21.978,2.471 c-2.935,0.574-5.476,1.066-7.139,1.066c-1.362,0-1.388-0.08-1.676-1.064c-0.844-2.865-1.461-5.703-2.062-8.445 c-1.676-7.678-3.119-14.312-9.002-15.215c-37.613-5.809-43.659-13.561-44.613-15.795c-0.149-0.352-0.216-0.652-0.231-0.918 c56.11-9.238,81.041-65.408,82.63-69.119c3.857-7.818,4.541-14.775,2.032-20.678c-4.442-10.461-17.638-14.653-26.368-17.422 c-2.007-0.635-3.735-1.187-5.048-1.705c-11.336-4.479-14.823-8.991-14.305-11.725c0.601-3.153,6.067-6.359,10.837-6.359 c1.072,0,2.012,0.173,2.707,0.498c7.747,3.631,14.819,5.472,21.022,5.472c9.751,0,14.091-4.537,14.557-5.055l1.057-1.182 l-0.085-1.583c-0.197-3.699-0.44-7.574-0.696-11.565c-1.583-25.205-3.563-56.553,4.158-73.871 c23.37-52.396,72.903-56.435,87.525-56.435c0.36,0,6.717-0.065,6.717-0.065C407.744,124.239,408.033,124.235,408.336,124.235 M408.336,115.197h-0.017c-0.333,0-0.646,0-0.944,0.004c-2.376,0.024-6.282,0.062-6.633,0.066c-8.566,0-25.705,1.21-44.115,9.336 c-10.526,4.643-19.994,10.921-28.14,18.66c-9.712,9.221-17.624,20.59-23.512,33.796c-8.623,19.336-6.576,51.905-4.932,78.078 l0.006,0.041c0.176,2.803,0.361,5.73,0.53,8.582c-1.265,0.581-3.316,1.194-6.339,1.194c-4.864,0-10.648-1.555-17.187-4.619 c-1.924-0.896-4.12-1.349-6.543-1.349c-3.893,0-7.997,1.146-11.557,3.239c-4.479,2.63-7.373,6.347-8.159,10.468 c-0.518,2.726-0.493,8.114,5.492,13.578c3.292,3.008,8.128,5.782,14.37,8.249c1.638,0.645,3.582,1.261,5.641,1.914 c7.145,2.271,17.959,5.702,20.779,12.339c1.429,3.365,0.814,7.793-1.823,13.145c-0.069,0.146-0.138,0.289-0.201,0.439 c-0.659,1.539-6.807,15.465-19.418,30.152c-7.166,8.352-15.059,15.332-23.447,20.752c-10.238,6.617-21.316,10.943-32.923,12.855 c-4.558,0.748-7.813,4.809-7.559,9.424c0.078,1.33,0.39,2.656,0.931,3.939c0.004,0.008,0.009,0.016,0.013,0.023 c1.843,4.311,6.116,7.973,13.063,11.203c8.489,3.943,21.185,7.26,37.732,9.855c0.836,1.59,1.704,5.586,2.305,8.322 c0.629,2.908,1.285,5.898,2.22,9.074c1.009,3.441,3.626,7.553,10.349,7.553c2.548,0,5.478-0.574,8.871-1.232 c4.969-0.975,11.764-2.305,20.245-2.305c4.702,0,9.575,0.414,14.48,1.229c9.455,1.574,17.606,7.332,27.037,14 c13.804,9.758,29.429,20.803,53.302,20.803c0.651,0,1.304-0.021,1.949-0.066c0.789,0.037,1.767,0.066,2.799,0.066 c23.88,0,39.501-11.049,53.29-20.799l0.022-0.02c9.433-6.66,17.575-12.41,27.027-13.984c4.903-0.814,9.775-1.229,14.479-1.229 c8.102,0,14.517,1.033,20.245,2.15c3.738,0.736,6.643,1.09,8.872,1.09l0.218,0.004h0.226c4.917,0,8.53-2.699,9.909-7.422 c0.916-3.109,1.57-6.029,2.215-8.986c0.562-2.564,1.46-6.674,2.296-8.281c16.558-2.6,29.249-5.91,37.739-9.852 c6.931-3.215,11.199-6.873,13.053-11.166c0.556-1.287,0.881-2.621,0.954-3.979c0.261-4.607-2.999-8.676-7.56-9.424 c-51.585-8.502-74.824-61.506-75.785-63.758c-0.062-0.148-0.132-0.295-0.205-0.438c-2.637-5.354-3.246-9.777-1.816-13.148 c2.814-6.631,13.621-10.062,20.771-12.332c2.07-0.652,4.021-1.272,5.646-1.914c7.039-2.78,12.07-5.796,15.389-9.221 c3.964-4.083,4.736-7.995,4.688-10.555c-0.121-6.194-4.856-11.698-12.388-14.393c-2.544-1.052-5.445-1.607-8.399-1.607 c-2.011,0-4.989,0.276-7.808,1.592c-6.035,2.824-11.441,4.368-16.082,4.588c-2.468-0.125-4.199-0.66-5.32-1.171 c0.141-2.416,0.297-4.898,0.458-7.486l0.067-1.108c1.653-26.19,3.707-58.784-4.92-78.134c-5.913-13.253-13.853-24.651-23.604-33.892 c-8.178-7.744-17.678-14.021-28.242-18.661C434.052,116.402,416.914,115.197,408.336,115.197">
+                                            </path>
+                                            <rect x="147.553" y="39.443" style="fill:none;" width="514.231"
+                                                height="514.23"></rect>
+                                        </g>
+                                    </svg>
+                                </div>
+                                <div class="col-9 p-1 mb-3">
+                                    <p class="align-items-center text-dark">
+                                        {{ __('messages.social.Share_on_snapchat') }}</p>
+                                </div>
+                                <div class="col-1 p-1 mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow" version="1.0"
+                                        height="16px" viewBox="0 0 512.000000 512.000000"
+                                        preserveAspectRatio="xMidYMid meet">
+                                        <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)"
+                                            fill="#000000" stroke="none">
+                                            <path
+                                                d="M1277 4943 l-177 -178 1102 -1102 1103 -1103 -1103 -1103 -1102 -1102 178 -178 177 -177 1280 1280 1280 1280 -1280 1280 -1280 1280 -178 -177z" />
+                                        </g>
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                        <div class="col-12 justify-content-between social-link-modal">
+                            <div class="input-group send-vcard">
+                                <input type="text" class="form-control"
+                                    placeholder="{{ request()->fullUrl() }}" disabled>
+                                <span id="vcardUrlCopy{{ $vcard->id }}" class="d-none" target="_blank">
+                                    {{ $vcardUrl }} </span>
+                                <button class="copy-vcard-clipboard btn btn-dark" title="Copy Link"
+                                    data-id="{{ $vcard->id }}">
+                                    <i class="fa-regular fa-copy fa-2x"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        @if (isset(checkFeature('advanced')->custom_js) && $vcard->custom_js)
+            {!! $vcard->custom_js !!}
+        @endif
+    </script>
+    @include('vcardTemplates.template.templates')
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <script type="text/javascript" src="{{ asset('assets/js/front-third-party.js') }}"></script>
+    <script type="text/javascript" src="{{ asset('front/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('assets/js/slider/js/slick.min.js') }}" type="text/javascript"></script>
+    @if (checkFeature('seo') && $vcard->google_analytics)
+        {!! $vcard->google_analytics !!}
+    @endif
+    @php
+        $setting = \App\Models\UserSetting::where('user_id', $vcard->tenant->user->id)
+            ->where('key', 'stripe_key')
+            ->first();
+    @endphp
+    <script>
+        $(document).ready(function() {
+            $("#month-input").datepicker({
+                dateFormat: "dd/mm/yy",
+            });
+        });
+    </script>
+    <script>
+        let stripe = ''
+        @if (!empty($setting) && !empty($setting->value))
+            stripe = Stripe('{{ $setting->value }}');
+        @endif
+    </script>
+
+    <script>
+        let isEdit = false
+        let password = "{{ isset(checkFeature('advanced')->password) && !empty($vcard->password) }}"
+        let passwordUrl = "{{ route('vcard.password', $vcard->id) }}";
+        let enquiryUrl = "{{ route('enquiry.store', ['vcard' => $vcard->id, 'alias' => $vcard->url_alias]) }}";
+        let appointmentUrl = "{{ route('appointment.store', ['vcard' => $vcard->id, 'alias' => $vcard->url_alias]) }}";
+        let slotUrl = "{{ route('appointment-session-time', $vcard->url_alias) }}";
+        let appUrl = "{{ config('app.url') }}";
+        let vcardId = {{ $vcard->id }};
+        let vcardAlias = "{{ $vcard->url_alias }}";
+        let languageChange = "{{ url('language') }}";
+        let paypalUrl = "{{ route('paypal.init') }}"
+        let lang = "{{ checkLanguageSession($vcard->url_alias) }}";
+        let userDateFormate = "{{ getSuperAdminSettingValue('datetime_method') ?? 1 }}";
+        let userlanguage = "{{ getLanguage($vcard->default_language) }}";
+        /* let isRtl = "{{ getLocalLanguage() == 'ar' || 'fa' ? 'true' : 'false' }}" === "true"; */
+    </script>
+    <script>
+        // Payment Gateway Initialization for Appointments
+        if ("{{ getUserSettingValue('mercado_pago_enable', $vcard->user->id) }}" == "1") {
+            var appointmentMercadoPagoPublicKey = new MercadoPago(
+                "{{ getUserSettingValue('mp_public_key', $vcard->user->id) }}");
+        }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const qrCodeFourty = document.getElementById("qr-code-fourty");
+            const link = document.getElementById('qr-code-btn');
+
+            if (!qrCodeFourty || !link) return;
+
+            const img = qrCodeFourty.querySelector("img");
+            const svg = qrCodeFourty.querySelector("svg");
+
+            if (img) {
+                link.href = img.src;
+            } else if (svg) {
+                const blob = new Blob([svg.outerHTML], {
+                    type: 'image/svg+xml'
+                });
+                const url = URL.createObjectURL(blob);
+                const image = document.createElement('img');
+                image.src = url;
+                image.addEventListener('load', () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = canvas.height = {{ $vcard->qr_code_download_size }};
+                    const context = canvas.getContext('2d');
+                    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                    link.href = canvas.toDataURL();
+                    URL.revokeObjectURL(url);
+                });
+            }
+        });
+    </script>
+    <script>
+        $(".gallery-slider").slick({
+            infinite: true,
+            slidesToShow: 1,
+            slidesToScroll: 1,
+            dots: true,
+            autoplay: true,
+            autoplaySpeed: 2000,
+            arrows: true,
+            prevArrow: '<button class="custom-prev"></button>',
+            nextArrow: '<button class="custom-next"></button>'
+        });
+        
+        document.addEventListener('play', function(e) {
+            if (e.target.tagName === 'VIDEO' || e.target.tagName === 'AUDIO') {
+                let $slider = $(e.target).closest('.gallery-slider');
+                if ($slider.length) {
+                    $slider.slick('slickPause');
+                    $slider.slick('slickSetOption', 'swipe', false);
+                    $slider.slick('slickSetOption', 'draggable', false);
+                }
+            }
+        }, true);
+
+        const handleMediaPause = function(target) {
+            if (target.tagName === 'VIDEO' || target.tagName === 'AUDIO') {
+                let $slider = $(target).closest('.gallery-slider');
+                if ($slider.length) {
+                    let otherPlaying = false;
+                    $slider.find('video, audio').each(function() {
+                        if (!this.paused && !this.ended) {
+                            otherPlaying = true;
+                        }
+                    });
+                    if (!otherPlaying) {
+                        $slider.slick('slickPlay');
+                        $slider.slick('slickSetOption', 'swipe', true);
+                        $slider.slick('slickSetOption', 'draggable', true);
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('pause', function(e) {
+            handleMediaPause(e.target);
+        }, true);
+
+        document.addEventListener('ended', function(e) {
+            handleMediaPause(e.target);
+        }, true);
+
+        $(".gallery-slider").find(".slick-cloned a").removeAttr("data-lightbox");
+        $(document).on("click", ".expand-icon", function(e) {
+            let $galleryItem = $(this).closest(".gallery-item");
+
+            function openFullscreen(elem) {
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                } else if (elem.webkitEnterFullscreen) {
+                    elem.webkitEnterFullscreen();
+                }
+            }
+
+            let video = $galleryItem.find("video")[0];
+            if (video) {
+                e.preventDefault();
+                openFullscreen(video);
+                return;
+            }
+
+            let iframe = $galleryItem.find("iframe")[0];
+            if (iframe) {
+                e.preventDefault();
+                openFullscreen(iframe);
+                return;
+            }
+
+            let audioContainer = $galleryItem.find(".audio-container")[0];
+            if (audioContainer) {
+                e.preventDefault();
+                openFullscreen(audioContainer);
+                return;
+            }
+
+            let $fileLink = $galleryItem.find(".gallery-file-link");
+            if ($fileLink.length) {
+                e.preventDefault();
+                window.open($fileLink.attr("href"), "_blank");
+                return;
+            }
+        });
+        $(".gallery-filter-btn").on("click", function() {
+            let filterKey = $(this).data("gallery-filter");
+
+            $(".gallery-filter-btn").removeClass("active");
+            $(this).addClass("active");
+
+            $(".gallery-filter-panel").removeClass("active").hide();
+            let activePanel = $('.gallery-filter-panel[data-gallery-panel="' + filterKey + '"]');
+            activePanel.addClass("active").show();
+            activePanel.find(".gallery-slider").slick("setPosition");
+        });
+
+        $(".service-slider").slick({
+            infinite: true,
+            slidesToShow: 2,
+            slidesToScroll: 1,
+            dots: true,
+            autoplay: true,
+            autoplaySpeed: 2000,
+            arrows: false,
+            responsive: [{
+                breakpoint: 475,
+                settings: {
+                    slidesToShow: 1,
+                    slidesToScroll: 1,
+                    infinite: true,
+                    dots: false,
+                },
+            }, ],
+        });
+
+        $(".product-slider").slick({
+            infinite: true,
+            slidesToShow: 2,
+            slidesToScroll: 1,
+            dots: false,
+            autoplay: true,
+            autoplaySpeed: 2000,
+            arrows: false,
+            responsive: [{
+                breakpoint: 575,
+                settings: {
+                    slidesToShow: 1,
+                    slidesToScroll: 1,
+                    infinite: true,
+                    dots: false,
+                },
+            }, ],
+        });
+
+        $(".whatsapp-store-slider").slick({
+            infinite: true,
+            slidesToShow: 2,
+            slidesToScroll: 1,
+            dots: false,
+            autoplay: true,
+            autoplaySpeed: 2000,
+            arrows: false,
+            responsive: [{
+                breakpoint: 575,
+                settings: {
+                    slidesToShow: 1,
+                    slidesToScroll: 1,
+                    infinite: true,
+                    dots: false,
+                },
+            }, ],
+        });
+
+        $(".blog-slider").slick({
+            infinite: true,
+            slidesToShow: 1,
+            slidesToScroll: 1,
+            dots: true,
+            autoplay: true,
+            autoplaySpeed: 2000,
+            arrows: false,
+        });
+
+        $(".testimonial-slider").slick({
+            infinite: true,
+            slidesToShow: 1,
+            slidesToScroll: 1,
+            dots: true,
+            autoplay: true,
+            autoplaySpeed: 2000,
+            arrows: true,
+            prevArrow: '<button class="custom-prev"></button>',
+            nextArrow: '<button class="custom-next"></button>'
+        });
+
+        // Custom button click
+        $(".prev-arrow").click(function() {
+            $(".blog-slider").slick("slickPrev");
+        });
+
+        $(".next-arrow").click(function() {
+            $(".blog-slider").slick("slickNext");
+        });
+
+        $(".iframe-slider").slick({
+            infinite: true,
+            slidesToShow: 1,
+            slidesToScroll: 1,
+            dots: true,
+            autoplay: true,
+            autoplaySpeed: 2000,
+            arrows: false,
+        });
+        $(".payment-link-slider").slick({
+            arrows: false,
+            infinite: true,
+            dots: false,
+            slidesToShow: 2,
+            slidesToScroll: 1,
+            autoplay: true,
+            responsive: [{
+                breakpoint: 575,
+                settings: {
+                    slidesToShow: 1,
+                    dots: true,
+                },
+            }, ],
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('cover-video');
+            const toggleBtn = document.getElementById('soundToggle');
+
+            if (!video || !toggleBtn) return;
+
+            const getIconEl = () =>
+                toggleBtn.querySelector('[data-fa-i2svg]') ||
+                toggleBtn.querySelector('svg') ||
+                toggleBtn.querySelector('i');
+
+            // start muted
+            video.muted = true;
+
+            const updateIcon = () => {
+                const icon = getIconEl();
+                if (!icon) return;
+
+                icon.classList.remove('fa-volume-high', 'fa-volume-xmark');
+                icon.setAttribute('data-icon', video.muted ? 'volume-xmark' : 'volume-high');
+                icon.classList.add(video.muted ? 'fa-volume-xmark' : 'fa-volume-high');
+            };
+
+            updateIcon();
+
+            toggleBtn.addEventListener('click', () => {
+                video.muted = !video.muted;
+                if (!video.muted) {
+                    video.play(); // for iOS/Safari
+                }
+                updateIcon();
+            });
+        });
+    </script>
+    @routes
+    <script src="{{ asset('messages.js?$mixID') }}"></script>
+    <script src="{{ mix('assets/js/custom/helpers.js') }}"></script>
+    <script src="{{ mix('assets/js/custom/custom.js') }}"></script>
+    <script src="{{ mix('assets/js/vcards/vcard-view.js') }}"></script>
+    <script src="{{ mix('assets/js/lightbox.js') }}"></script>
+    <script src="{{ asset('/sw.js') }}"></script>
+    <script>
+        if ("serviceWorker" in navigator) {
+            // Register a service worker hosted at the root of the
+            // site using the default scope.
+            navigator.serviceWorker.register("/sw.js").then(
+                (registration) => {
+                    console.log("Service worker registration succeeded:", registration);
+                },
+                (error) => {
+                    console.error(`Service worker registration failed: ${error}`);
+                },
+            );
+        } else {
+            console.error("Service workers are not supported.");
+        }
+    </script>
+    <script>
+        let deferredPrompt = null;
+        let isPWAInstalled = false;
+
+        async function checkIfInstalled() {
+            if (window.matchMedia('(display-mode: standalone)').matches ||
+                window.matchMedia('(display-mode: minimal-ui)').matches) {
+                return true;
+            }
+
+            if ('getInstalledRelatedApps' in navigator) {
+                try {
+                    const relatedApps = await navigator.getInstalledRelatedApps();
+                    return relatedApps.some(app => app.id === window.location.origin);
+                } catch (e) {
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        function showCustomPrompt() {
+            const container = document.getElementById('pwa-container');
+            const pwaSupport = document.querySelector('.pwa-support');
+            const installBtn = document.getElementById('installPwaBtn');
+
+            if (container) container.style.display = 'block';
+            if (pwaSupport) pwaSupport.style.display = 'flex';
+            if (installBtn) installBtn.style.display = 'block';
+        }
+
+        function hideCustomPrompt() {
+            const container = document.getElementById('pwa-container');
+            const pwaSupport = document.querySelector('.pwa-support');
+            const installBtn = document.getElementById('installPwaBtn');
+
+            if (container) container.style.display = 'none';
+            if (pwaSupport) pwaSupport.style.display = 'none';
+            if (installBtn) installBtn.style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            isPWAInstalled = await checkIfInstalled();
+
+            if (isPWAInstalled) {
+                hideCustomPrompt();
+            }
+        });
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+
+            if (!isPWAInstalled) {
+                deferredPrompt = e;
+                // Wait 100ms for DOM to be ready
+                setTimeout(showCustomPrompt, 10);
+            }
+        });
+
+        // Hide when installed
+        window.addEventListener('appinstalled', () => {
+            isPWAInstalled = true;
+            hideCustomPrompt();
+        });
+
+        // Install button
+        document.addEventListener('click', async (e) => {
+            if (e.target.id === 'installPwaBtn') {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const {
+                        outcome
+                    } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        hideCustomPrompt();
+                    }
+                    deferredPrompt = null;
+                }
+            }
+        });
+    </script>
+
+    <script>
+        // UPI deep-link handler (opens payment apps on mobile)
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('.js-upi-pay');
+            if (!link) return;
+
+            const url = link.getAttribute('data-upi-url') || link.getAttribute('href');
+            if (!url) return;
+
+            e.preventDefault();
+            window.location.href = url;
+        });
+    </script>
+</body>
+
+</html>
